@@ -1,0 +1,2 @@
+# uniapp_vite_vue_tailwindcss_3dgaussian
+uniapp vite vue3 tailwindcssV4 3dgaussian
