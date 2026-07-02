@@ -103,176 +103,7 @@ const scenes = ref([
     size: '中型',
     quality: '高质量',
     status: '可用',
-    sceneConfig: {
-      // 可选：配置 cameraView 后，点击 billboard 会跳转到指定镜头
-      billboards: [
-         {
-          text: '高鹏',
-           position: [3.92, -2, -25.28],
-          scale: [2, 1, 1.5],
-          boardWidth: 2,
-          boardHeight: 1,
-          fontSize: 100,
-          textColor: '#ffffff',
-          strokeColor: '#00a2ff',
-          backgroundColor: 'rgba(0, 52, 105, 0)',
-          cameraView: {
-            position: [6.35459, -3.55956, -20.],
-            lookAt: [3.92, -1, -25.28],
-            up: [0, -1, 0],
-            duration: 1200
-          }
-        },
-        {
-          text: '李涛',
-           position: [3.504, -2, -21.534],
-          scale: [2, 1, 1.5],
-          boardWidth: 2,
-          boardHeight: 1,
-          fontSize: 100,
-          textColor: '#ffffff',
-          strokeColor: '#00a2ff',
-          backgroundColor: 'rgba(0, 52, 105, 0)',
-           cameraView: {
-            position: [5.21816, -2.3815, -24.66643],
-            lookAt: [2.67767, 0.62673, -20.53880],
-            up: [0, -1, 0],
-            duration: 1200
-          }
-        },
-        {
-          text: '李任宇',
-           position: [5.9550, -2, -25.034],
-           scale: [2, 1, 1.5],
-          boardWidth: 2,
-          boardHeight: 1,
-          fontSize: 100,
-          textColor: '#ffffff',
-          strokeColor: '#00a2ff',
-          backgroundColor: 'rgba(0, 52, 105, 0)',
-           cameraView: {
-          position: [7.79784, -2.98341, -20.51865],
-lookAt: [5.18495, -0.46586, -25.73323],
-            up: [0, -1, 0],
-            duration: 1200
-          }
-        },
-        
-        {
-          text: '冯雁侠',
-           position: [5.31819, -2, -21.33851],
-            scale: [2, 1, 1.5],
-          boardWidth: 2,
-          boardHeight: 1,
-          fontSize: 100,
-          textColor: '#ffffff',
-          strokeColor: '#00a2ff',
-          backgroundColor: 'rgba(0, 52, 105, 0)',
-           cameraView: {
-  position: [7.77643, -2.40854, -24.11068],
-lookAt: [5.55744, -0.32702, -21.50315],
-            up: [0, -1, 0],
-            duration: 1200
-          }
-        },
-        
-        {
-          text: '宋文政',
-           position: [7.93717, -2, -24.72592],
-            scale: [2, 1, 1.5],
-          boardWidth: 2,
-          boardHeight: 1,
-          fontSize: 100,
-          textColor: '#ffffff',
-          strokeColor: '#00a2ff',
-          backgroundColor: 'rgba(0, 52, 105, 0)',
-          cameraView: {
-position: [9.48522, -2.37093, -20.67976],
-lookAt: [8.10535, -0.21539, -23.76285],
-            up: [0, -1, 0],
-            duration: 1200
-          }
-        },
-        
-        {
-          text: '李熙雅',
-           position: [7.398, -2, -21.037],
-            scale: [2, 1, 1.5],
-          boardWidth: 2,
-          boardHeight: 1,
-          fontSize: 100,
-          textColor: '#ffffff',
-          strokeColor: '#00a2ff',
-          backgroundColor: 'rgba(0, 52, 105, 0)',
-          cameraView: {
- position: [10.95855, -2.33709, -23.33384],
-lookAt: [7.56949, -0.47286, -21.0197],
-            up: [0, -1, 0],
-            duration: 1200
-          }
-        },
-        {
-          text: '李英',
-           position: [9.8237, -2, -24.51553],
-            scale: [2, 1, 1.5],
-          boardWidth: 2,
-          boardHeight: 1,
-          fontSize: 100,
-          textColor: '#ffffff',
-          strokeColor: '#00a2ff',
-          backgroundColor: 'rgba(0, 52, 105, 0)',
-          cameraView: {
-position: [11.05571, -2.61562, -21.12041],
-lookAt: [9.85798, 0.45039, -25.51335],
-            up: [0, -1, 0],
-            duration: 1200
-          }
-        },
-        {
-          text: '黄安子',
-           position: [-19.8237, -2, -31.6985],
-           scale: [2, 1, 1.5],
-          boardWidth: 2,
-          boardHeight: 1,
-          fontSize: 100,
-          textColor: '#ffffff',
-          strokeColor: '#00a2ff',
-          backgroundColor: 'rgba(0, 52, 105, 0)',
-          cameraView: {
-position: [-20.90826, -1.03176, -29.58311],
-lookAt: [-20.04269, -0.44317, -30.85122],
-            up: [0, -1, 0],
-            duration: 1200
-          }
-        }
-      ],
-      worldTexts: [
-//        {
-//   "text": "高 朋",
-//   "position": [3.85, -2, -24],
-//   "rotation": [0, 0, 0],
-//   "scale": [2, 1, 1],
-//   "textColor": "#ffffff",
-//   "strokeColor": "#00a2ff",
-//   "backgroundColor": "rgba(0, 52, 105, 0.85)"
-// }
-      ],
-      models3D: [],
-      gaussianSplats: [
-        {
-          url: '/fileserver/model/办公室/去掉顶部_6.ply',
-          position: [0, 0, 0],
-          rotation: [0, 0, 0],
-          scale: [1, 1, 1]
-        }
-      ],
-      // 镜头的初始视角，可以根据实际渲染效果再做微调
-      camera: {
-        position: [-2.512, -43.04, -2.806],   // 稍微拉高并后退，方便俯瞰“去掉顶部”的办公室
-        up: [0, -1, 0],          // 恢复常规的朝上方向（如果画面反了，可以改成 [0, -1, 0]）
-        lookAt: [-6.79427, -0.01434, -3.36058]       // 默认看向中心点
-      }
-    }
+    sceneConfigUrl: '/fileserver/model/办公室/办公室.json'
   },
 // {
 //     title: '人物',
@@ -998,13 +829,29 @@ lookAt: [-0.36096, -1.87202, 0.45816],
 
 // 跳转到场景页面的方法
 const navigateToScene = (scene) => {
-  sceneStore.setSceneFromSelection(scene)
+  if (scene?.sceneConfig || scene?.modelUrl) {
+    sceneStore.setSceneFromSelection(scene)
+  } else {
+    sceneStore.resetSceneConfig()
+    sceneStore.setStatus('正在加载场景配置...')
+  }
 
   console.log('🚀 跳转到场景页面:', scene.title)
-  console.log('📋 写入 Pinia 的配置:', scene.sceneConfig || { modelUrl: scene.modelUrl })
+  console.log('📋 场景入口信息:', {
+    sceneConfigUrl: scene.sceneConfigUrl,
+    sceneConfig: scene.sceneConfig,
+    modelUrl: scene.modelUrl
+  })
+
+  const queryParams = []
+  if (scene?.sceneConfigUrl) {
+    queryParams.push(`sceneConfigUrl=${encodeURIComponent(scene.sceneConfigUrl)}`)
+  }
+
+  const targetUrl = `/pages/scene/scene${queryParams.length ? `?${queryParams.join('&')}` : ''}`
 
   uni.navigateTo({
-    url: '/pages/scene/scene',
+    url: targetUrl,
     fail: (error) => {
       console.error('页面跳转失败:', error)
       uni.showToast({

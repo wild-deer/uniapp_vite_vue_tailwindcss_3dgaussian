@@ -69,20 +69,35 @@ export const useSceneStore = defineStore('scene', () => {
     })
   }
 
+  const applySceneSelection = ({ sceneConfig: nextSceneConfig, modelUrl } = {}) => {
+    resetSceneConfig()
+
+    if (nextSceneConfig) {
+      mergeSceneConfig(nextSceneConfig)
+      console.log('🎯 解析场景配置成功:', sceneConfig.value)
+    }
+
+    appendGaussianSplat(modelUrl)
+    hasSceneConfig.value = !!(nextSceneConfig || modelUrl)
+
+    setStatus(hasSceneConfig.value ? '场景配置准备完成' : '未提供场景配置，使用默认配置')
+    logSceneConfigSummary()
+  }
+
+  const setSceneConfig = (nextSceneConfig) => {
+    try {
+      applySceneSelection({ sceneConfig: nextSceneConfig })
+    } catch (error) {
+      hasSceneConfig.value = false
+      resetSceneConfig()
+      console.error('❌ 写入场景配置失败:', error)
+      setStatus('场景配置设置失败，使用默认配置')
+    }
+  }
+
   const setSceneFromSelection = (scene) => {
     try {
-      resetSceneConfig()
-
-      if (scene?.sceneConfig) {
-        mergeSceneConfig(scene.sceneConfig)
-        console.log('🎯 解析场景配置成功:', sceneConfig.value)
-      }
-
-      appendGaussianSplat(scene?.modelUrl)
-      hasSceneConfig.value = !!(scene?.sceneConfig || scene?.modelUrl)
-
-      setStatus(hasSceneConfig.value ? '场景配置准备完成' : '未提供场景配置，使用默认配置')
-      logSceneConfigSummary()
+      applySceneSelection(scene)
     } catch (error) {
       hasSceneConfig.value = false
       resetSceneConfig()
@@ -104,6 +119,7 @@ export const useSceneStore = defineStore('scene', () => {
     toggleControls,
     resetSceneConfig,
     mergeSceneConfig,
+    setSceneConfig,
     setSceneFromSelection
   }
 })
