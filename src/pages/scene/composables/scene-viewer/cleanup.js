@@ -173,8 +173,8 @@ export const performCompleteCleanup = ({
     }
 
     if (sceneResources.value.eventListeners.length > 0) {
-      sceneResources.value.eventListeners.forEach(({ element, event, handler }) => {
-        element.removeEventListener(event, handler)
+      sceneResources.value.eventListeners.forEach(({ element, event, handler, options }) => {
+        element.removeEventListener(event, handler, options)
       })
       sceneResources.value.eventListeners = []
       console.log('✓ 事件监听器已清理')

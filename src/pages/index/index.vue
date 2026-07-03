@@ -362,7 +362,8 @@ const scenes = ref([
         {
           text: '项目入口',
           position: [-350, -110, 260],
-          rotation: [0, -0.6, 0],
+          up: [0, 1, 0],
+          angle: -0.6,
           scale: [42, 14, 1],
           fontSize: 96,
           textColor: '#ffffff',

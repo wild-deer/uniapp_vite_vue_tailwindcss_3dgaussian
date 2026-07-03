@@ -5,10 +5,20 @@
       :debug-mode="sceneStore.debugMode"
       :playing-video="sceneStore.playingVideo"
       :videos="availableVideos"
+      :world-text-options="worldTextOptions"
+      :selected-world-text-index="selectedWorldTextIndexValue"
+      :selected-world-text-angle="selectedWorldTextAngleValue"
+      :selected-world-text-tilt-angle="selectedWorldTextTiltAngleValue"
+      :selected-world-text-roll-angle="selectedWorldTextRollAngleValue"
       @back="goBack"
       @toggle-controls="sceneStore.toggleControls"
       @select-video="selectVideo"
       @toggle-debug="toggleDebugMode"
+      @select-world-text="selectWorldText"
+      @update-world-text-angle="updateWorldTextAngle"
+      @update-world-text-tilt-angle="updateWorldTextTiltAngle"
+      @update-world-text-roll-angle="updateWorldTextRollAngle"
+      @copy-world-text="copyWorldTextConfig"
       @reset-camera="resetCamera"
       @close-video="exitVideo"
       @copy-camera="copyCameraView"
@@ -73,9 +83,20 @@ let logMemoryUsage
 let resetCameraView
 let moveCameraToView
 let setViewerInteractionLocked
+let setWorldTextDebugEnabled
+let copySelectedWorldText
+let worldTextDebugOptions
+let selectedWorldTextIndex
+let selectedWorldTextAngle
+let selectedWorldTextTiltAngle
+let selectedWorldTextRollAngle
+let selectWorldTextByIndex
+let setSelectedWorldTextAngle
+let setSelectedWorldTextTiltAngle
+let setSelectedWorldTextRollAngle
 
 // #ifdef H5
-;({ viewer, initViewer, performCompleteCleanup, logMemoryUsage, resetCameraView, moveCameraToView, setViewerInteractionLocked } =
+;({ viewer, initViewer, performCompleteCleanup, logMemoryUsage, resetCameraView, moveCameraToView, setViewerInteractionLocked, setWorldTextDebugEnabled, copySelectedWorldText, worldTextDebugOptions, selectedWorldTextIndex, selectedWorldTextAngle, selectedWorldTextTiltAngle, selectedWorldTextRollAngle, selectWorldTextByIndex, setSelectedWorldTextAngle, setSelectedWorldTextTiltAngle, setSelectedWorldTextRollAngle } =
   useSceneViewer(sceneStore))
 // #endif
 
@@ -194,6 +215,7 @@ watch(
   () => [sceneStore.interactionLocked, sceneStore.debugMode],
   ([interactionLocked, debugMode]) => {
     setViewerInteractionLocked?.(!!interactionLocked && !debugMode)
+    setWorldTextDebugEnabled?.(debugMode)
   },
   { immediate: true }
 )
@@ -226,6 +248,79 @@ const getVideoUrl = (video) => {
 
 const toggleDebugMode = () => {
   sceneStore.toggleDebugMode()
+}
+
+const worldTextOptions = computed(() => worldTextDebugOptions?.value || [])
+const selectedWorldTextAngleValue = computed(() => selectedWorldTextAngle?.value || 0)
+const selectedWorldTextTiltAngleValue = computed(() => selectedWorldTextTiltAngle?.value || 0)
+const selectedWorldTextRollAngleValue = computed(() => selectedWorldTextRollAngle?.value || 0)
+const selectedWorldTextIndexValue = computed(() => selectedWorldTextIndex?.value ?? -1)
+
+const selectWorldText = (index) => {
+  const selected = selectWorldTextByIndex?.(index)
+  if (!selected) {
+    uni.showToast({
+      title: '标牌选择失败',
+      icon: 'none'
+    })
+  }
+}
+
+const updateWorldTextAngle = (angle) => {
+  const updated = setSelectedWorldTextAngle?.(angle)
+  if (!updated && sceneStore.debugMode) {
+    uni.showToast({
+      title: '请先选择一个标牌',
+      icon: 'none'
+    })
+  }
+}
+
+const updateWorldTextTiltAngle = (tiltAngle) => {
+  const updated = setSelectedWorldTextTiltAngle?.(tiltAngle)
+  if (!updated && sceneStore.debugMode) {
+    uni.showToast({
+      title: '请先选择一个标牌',
+      icon: 'none'
+    })
+  }
+}
+
+const updateWorldTextRollAngle = (rollAngle) => {
+  const updated = setSelectedWorldTextRollAngle?.(rollAngle)
+  if (!updated && sceneStore.debugMode) {
+    uni.showToast({
+      title: '请先选择一个标牌',
+      icon: 'none'
+    })
+  }
+}
+
+const copyWorldTextConfig = () => {
+  const data = copySelectedWorldText?.()
+  if (!data) {
+    uni.showToast({
+      title: '请先开启调试并选中标牌',
+      icon: 'none'
+    })
+    return
+  }
+
+  uni.setClipboardData({
+    data,
+    success: () => {
+      uni.showToast({
+        title: '已复制标牌参数',
+        icon: 'success'
+      })
+    },
+    fail: () => {
+      uni.showToast({
+        title: '复制失败',
+        icon: 'none'
+      })
+    }
+  })
 }
 
 const getVideoCameraView = (video) => {
