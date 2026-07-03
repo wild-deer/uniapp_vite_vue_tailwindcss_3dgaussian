@@ -332,7 +332,7 @@ const scenes = ref([
 //     }
 //   },
   {
-    title: '内蒙古公路',
+    title: '公路',
     description: '辽阔壮美的内蒙古草原公路，一望无际的草原风光和笔直的公路向天际延伸。体验大自然的雄浑与自由。',
     icon: '🛣️',
     type: '室外场景',
@@ -759,6 +759,20 @@ const scenes = ref([
       billboards: [
         
       ],
+      videos: [
+    {
+      url: 'fileserver/model/demo.mp4',
+      position: [0, 0, 0],
+      rotation: [Math.PI, 0, 0],
+      scale: [6, 0, 1],
+      autoAspect: true,
+      muted: true,
+      loop: true,
+      autoplay: true,
+      volume: 0,
+      doubleSided: true
+    }
+  ],
       models3D: [],
       gaussianSplats: [
         {

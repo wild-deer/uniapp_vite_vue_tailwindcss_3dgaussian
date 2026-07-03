@@ -6,6 +6,7 @@ const createDefaultSceneConfig = () => ({
   worldTexts: [],
   models3D: [],
   gaussianSplats: [],
+  videos: [],
   camera: {
     position: [-1, -4, 6],
     up: [0, -1, 0],
@@ -18,8 +19,13 @@ export const useSceneStore = defineStore('scene', () => {
   const status = ref('准备加载3D场景')
   const showControls = ref(false)
   const isDevelopment = ref(false)
+  const debugMode = ref(false)
+  const showVideos = ref(false)
+  const playingVideo = ref(false)
+  const activeVideo = ref(null)
   const hasSceneConfig = ref(false)
   const sceneConfig = ref(createDefaultSceneConfig())
+  const interactionLocked = ref(false)
 
   const setLoading = (value) => {
     loading.value = !!value
@@ -33,8 +39,34 @@ export const useSceneStore = defineStore('scene', () => {
     isDevelopment.value = !!value
   }
 
+  const toggleDebugMode = () => {
+    debugMode.value = !debugMode.value
+  }
+
   const toggleControls = () => {
     showControls.value = !showControls.value
+  }
+
+  const openVideos = () => {
+    showVideos.value = true
+  }
+
+  const closeVideos = () => {
+    showVideos.value = false
+  }
+
+  const startVideoPlayback = (video) => {
+    activeVideo.value = video || null
+    playingVideo.value = !!(video && typeof video === 'object' && typeof video.url === 'string' && video.url.trim())
+  }
+
+  const stopVideoPlayback = () => {
+    playingVideo.value = false
+    activeVideo.value = null
+  }
+
+  const setInteractionLocked = (value) => {
+    interactionLocked.value = !!value
   }
 
   const resetSceneConfig = () => {
@@ -111,12 +143,23 @@ export const useSceneStore = defineStore('scene', () => {
     status,
     showControls,
     isDevelopment,
+    debugMode,
+    showVideos,
+    playingVideo,
+    activeVideo,
     hasSceneConfig,
     sceneConfig,
+    interactionLocked,
     setLoading,
     setStatus,
     setIsDevelopment,
+    toggleDebugMode,
     toggleControls,
+    openVideos,
+    closeVideos,
+    startVideoPlayback,
+    stopVideoPlayback,
+    setInteractionLocked,
     resetSceneConfig,
     mergeSceneConfig,
     setSceneConfig,

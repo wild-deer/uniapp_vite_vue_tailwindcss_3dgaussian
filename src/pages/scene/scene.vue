@@ -1,10 +1,16 @@
 <template>
-  <view class="flex flex-col h-screen bg-black">
+  <view class="flex flex-col h-screen bg-black relative">
     <SceneNavbar
       :is-development="sceneStore.isDevelopment"
+      :debug-mode="sceneStore.debugMode"
+      :playing-video="sceneStore.playingVideo"
+      :videos="availableVideos"
       @back="goBack"
       @toggle-controls="sceneStore.toggleControls"
+      @select-video="selectVideo"
+      @toggle-debug="toggleDebugMode"
       @reset-camera="resetCamera"
+      @close-video="exitVideo"
       @copy-camera="copyCameraView"
       @log-memory="logMemoryUsage"
     />
@@ -37,14 +43,19 @@
       v-if="sceneStore.showControls"
       @close="sceneStore.toggleControls"
     />
+    <SceneVideoModal
+      :playing-video="sceneStore.playingVideo"
+      :active-video="sceneStore.activeVideo"
+    />
   </view>
 </template>
 
 <script setup>
-import { onMounted, onBeforeUnmount } from 'vue'
+import { computed, onMounted, onBeforeUnmount, watch } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
 import SceneNavbar from './components/SceneNavbar.vue'
 import SceneControlsPanel from './components/SceneControlsPanel.vue'
+import SceneVideoModal from './components/SceneVideoModal.vue'
 import { useSceneStore } from '../../stores/scene'
 
 // #ifdef H5
@@ -60,9 +71,12 @@ let initViewer
 let performCompleteCleanup
 let logMemoryUsage
 let resetCameraView
+let moveCameraToView
+let setViewerInteractionLocked
 
 // #ifdef H5
-;({ viewer, initViewer, performCompleteCleanup, logMemoryUsage, resetCameraView } = useSceneViewer(sceneStore))
+;({ viewer, initViewer, performCompleteCleanup, logMemoryUsage, resetCameraView, moveCameraToView, setViewerInteractionLocked } =
+  useSceneViewer(sceneStore))
 // #endif
 
 const normalizeRouteParam = (value) => Array.isArray(value) ? value[0] : value
@@ -170,17 +184,105 @@ onMounted(async () => {
 
 onBeforeUnmount(() => {
   // 执行完美清理
+  sceneStore.stopVideoPlayback()
+  sceneStore.setInteractionLocked(false)
+  setViewerInteractionLocked?.(false)
   performCompleteCleanup?.()
 })
+
+watch(
+  () => [sceneStore.interactionLocked, sceneStore.debugMode],
+  ([interactionLocked, debugMode]) => {
+    setViewerInteractionLocked?.(!!interactionLocked && !debugMode)
+  },
+  { immediate: true }
+)
 
 // 方法定义
 const goBack = () => {
   // 在页面跳转前执行完美清理
+  sceneStore.stopVideoPlayback()
+  sceneStore.setInteractionLocked(false)
+  setViewerInteractionLocked?.(false)
   performCompleteCleanup?.()
   
   uni.redirectTo({
     url: '/pages/index/index'
   })
+}
+
+const availableVideos = computed(() => (Array.isArray(sceneStore.sceneConfig?.videos) ? sceneStore.sceneConfig.videos : []))
+
+const normalizeVideoUrl = (value) => {
+  if (typeof value !== 'string') return ''
+  return value.trim()
+}
+
+const getVideoUrl = (video) => {
+  if (!video) return ''
+  if (typeof video === 'string') return normalizeVideoUrl(video)
+  return normalizeVideoUrl(video.url || video.videoUrl || video.src)
+}
+
+const toggleDebugMode = () => {
+  sceneStore.toggleDebugMode()
+}
+
+const getVideoCameraView = (video) => {
+  const position = video?.camera?.position || video?.position
+  const lookAt = video?.camera?.lookAt || video?.lookAt
+  const up = video?.camera?.up || video?.up
+  const duration = Number.isFinite(video?.camera?.duration) ? video.camera.duration : video?.duration
+
+  return {
+    position,
+    lookAt,
+    ...(up ? { up } : {}),
+    ...(Number.isFinite(duration) ? { duration } : {})
+  }
+}
+
+const selectVideo = async (video) => {
+  const url = getVideoUrl(video)
+  if (!url) {
+    uni.showToast({
+      title: '视频地址缺失',
+      icon: 'none'
+    })
+    return
+  }
+
+  sceneStore.setInteractionLocked(true)
+
+  const cameraView = getVideoCameraView(video)
+  sceneStore.setStatus('正在切换镜头...')
+
+  const moved = await moveCameraToView?.(cameraView)
+  if (!moved) {
+    sceneStore.setInteractionLocked(false)
+    uni.showToast({
+      title: '镜头切换失败',
+      icon: 'none'
+    })
+    return
+  }
+
+  sceneStore.startVideoPlayback({
+    ...(typeof video === 'object' ? video : null),
+    url
+  })
+  sceneStore.setStatus('视频播放中')
+}
+
+const closeVideo = () => {
+  sceneStore.stopVideoPlayback()
+  sceneStore.setInteractionLocked(false)
+  sceneStore.setStatus('场景加载完成')
+}
+
+const exitVideo = () => {
+  closeVideo()
+  resetCamera()
 }
 
 const copyCameraView = () => {

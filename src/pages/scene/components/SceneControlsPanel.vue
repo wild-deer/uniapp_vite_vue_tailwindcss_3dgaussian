@@ -33,6 +33,10 @@
         <text class="text-blue-400 font-medium text-base block mb-3">键盘操作</text>
         <view class="space-y-2">
           <view class="flex justify-between">
+            <text class="text-gray-300 text-sm">W A S D</text>
+            <text class="text-white text-sm">沿水平面前后左右移动</text>
+          </view>
+          <view class="flex justify-between">
             <text class="text-gray-300 text-sm">I 键</text>
             <text class="text-white text-sm">显示调试信息</text>
           </view>
@@ -77,4 +81,3 @@
 <script setup>
 defineEmits(['close'])
 </script>
-

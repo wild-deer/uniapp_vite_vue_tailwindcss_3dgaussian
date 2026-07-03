@@ -193,7 +193,7 @@ export const loadBillboards = async (threeScene, billboards = []) => {
   }
 }
 
-export const applyBillboardCameraView = (gaussianViewer, cameraView, sceneResources) => {
+export const applyBillboardCameraView = (gaussianViewer, cameraView, sceneResources, options = null) => {
   const normalizedCameraView = normalizeCameraView(cameraView)
   if (!gaussianViewer?.camera || !normalizedCameraView) {
     return false
@@ -214,6 +214,24 @@ export const applyBillboardCameraView = (gaussianViewer, cameraView, sceneResour
   if (sceneResources?.value?.animationFrame) {
     cancelAnimationFrame(sceneResources.value.animationFrame)
     sceneResources.value.animationFrame = null
+  }
+
+  if (duration === 0) {
+    camera.position.copy(targetPosition)
+    camera.up.copy(targetUp).normalize()
+    camera.lookAt(targetLookAt)
+    camera.updateProjectionMatrix?.()
+    camera.updateMatrixWorld?.(true)
+
+    if (controls?.target) {
+      controls.target.copy(targetLookAt)
+      controls.update?.()
+    }
+
+    if (typeof options?.onComplete === 'function') {
+      options.onComplete()
+    }
+    return true
   }
 
   const startTime = performance.now()
@@ -242,6 +260,9 @@ export const applyBillboardCameraView = (gaussianViewer, cameraView, sceneResour
     }
 
     sceneResources.value.animationFrame = null
+    if (typeof options?.onComplete === 'function') {
+      options.onComplete()
+    }
   }
 
   sceneResources.value.animationFrame = requestAnimationFrame(animate)
