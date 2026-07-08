@@ -172,7 +172,7 @@ export function useSceneNavbarActions(sceneStore, deps) {
       return
     }
 
-    const data = `"playerWidth": ${Math.round(width)},\n"playerHeight": ${Math.round(height)}`
+    const data = `"playerWidth": ${Math.round(width)},\n"playerHeight": ${Math.round(height)},\n"contentScale": ${size.contentScale ?? 1}`
     copyToClipboard(data, '已复制播放尺寸')
   }
 

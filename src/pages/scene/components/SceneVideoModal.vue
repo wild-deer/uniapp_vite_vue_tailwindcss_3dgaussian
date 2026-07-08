@@ -16,24 +16,31 @@
         class="relative pointer-events-auto video-modal-panel"
         :style="videoContainerStyle"
       >
-        <img
-          v-if="isRealtimeImageStream"
-          :src="activeVideoUrl"
-          class="w-full h-full block bg-black shadow-xl realtime-stream"
-          alt="实时视频流"
-        >
-        <video
-          v-else-if="activeVideoUrl"
-          :src="activeVideoUrl"
-          class="w-full h-full block bg-black shadow-xl"
-          controls
-          autoplay
-          playsinline
-        />
+        <view class="content-layer" :style="contentStyle">
+          <img
+            v-if="isRealtimeImageStream"
+            :src="activeVideoUrl"
+            class="w-full h-full block bg-black shadow-xl realtime-stream"
+            alt="实时视频流"
+          >
+          <video
+            v-else-if="activeVideoUrl"
+            :src="activeVideoUrl"
+            class="w-full h-full block bg-black shadow-xl"
+            controls
+            autoplay
+            playsinline
+          />
+        </view>
         <view
           class="resize-handle"
           @mousedown.stop="handleResizeMouseDown"
           @touchstart.stop="handleResizeTouchStart"
+        />
+        <view
+          class="content-resize-handle"
+          @mousedown.stop="handleContentResizeMouseDown"
+          @touchstart.stop="handleContentResizeTouchStart"
         />
       </view>
     </view>
@@ -89,6 +96,7 @@ const defaultPlayerWidth = 960
 const defaultPlayerHeight = 540
 const minPlayerWidth = 240
 const minPlayerHeight = 180
+const defaultContentScale = 1
 
 const parsePixelValue = (value) => {
   if (typeof value === 'number' && Number.isFinite(value) && value > 0) return Math.round(value)
@@ -117,13 +125,36 @@ const getConfiguredPlayerSize = (video) => {
   return { width, height }
 }
 
+const parseScaleValue = (value) => {
+  if (typeof value === 'number' && Number.isFinite(value) && value > 0) return value
+  if (typeof value !== 'string') return 0
+  const num = parseFloat(value.trim())
+  if (!Number.isFinite(num) || num <= 0) return 0
+  return num
+}
+
+const getConfiguredContentScale = (video) => {
+  if (!video || typeof video !== 'object') return 0
+
+  const camera = video.camera && typeof video.camera === 'object' ? video.camera : null
+
+  return parseScaleValue(
+    camera?.contentScale ?? video.contentScale
+  )
+}
+
 const activeVideoUrl = computed(() => getVideoUrl(props.activeVideo))
 const isRealtimeImageStream = computed(() => isRealtimeStreamUrl(activeVideoUrl.value))
 const configuredPlayerSize = computed(() => getConfiguredPlayerSize(props.activeVideo))
+const configuredContentScale = computed(() => getConfiguredContentScale(props.activeVideo))
 const playerWidth = ref(defaultPlayerWidth)
 const playerHeight = ref(defaultPlayerHeight)
 const resizing = ref(false)
 const resizeStart = ref({ x: 0, y: 0, width: 0, height: 0 })
+
+const contentScale = ref(1)
+const contentResizing = ref(false)
+const contentResizeStart = ref({ x: 0, y: 0, scale: 1 })
 
 const getViewportSize = () => {
   try {
@@ -162,7 +193,12 @@ const resetPlayerSizeFromConfig = () => {
   )
 }
 
+const resetContentScaleFromConfig = () => {
+  contentScale.value = configuredContentScale.value || defaultContentScale
+}
+
 watch([activeVideoUrl, configuredPlayerSize], resetPlayerSizeFromConfig, { immediate: true })
+watch([activeVideoUrl, configuredContentScale], resetContentScaleFromConfig, { immediate: true })
 
 const stopResize = () => {
   if (!resizing.value) return
@@ -216,8 +252,69 @@ const handleResizeTouchStart = (event) => {
   startResizeWithPoint(touch.clientX, touch.clientY)
 }
 
+// --- 内容缩放拖拽 ---
+const stopContentResize = () => {
+  if (!contentResizing.value) return
+  contentResizing.value = false
+  if (typeof window !== 'undefined') {
+    window.removeEventListener('mousemove', handleContentResizeMove, true)
+    window.removeEventListener('mouseup', stopContentResize, true)
+    window.removeEventListener('touchmove', handleContentResizeTouchMove, { capture: true })
+    window.removeEventListener('touchend', stopContentResize, true)
+    window.removeEventListener('touchcancel', stopContentResize, true)
+  }
+}
+
+const handleContentResizeMove = (event) => {
+  if (!contentResizing.value) return
+  const dx = event.clientX - contentResizeStart.value.x
+  const dy = event.clientY - contentResizeStart.value.y
+  // 右上角拖拽：向右放大，向上放大
+  const baseDenominator = Math.max(playerWidth.value, playerHeight.value, 200)
+  const scaleDelta = (dx - dy) / baseDenominator
+  const nextScale = Math.max(0.5, Math.min(5, contentResizeStart.value.scale + scaleDelta))
+  contentScale.value = Math.round(nextScale * 100) / 100
+}
+
+const handleContentResizeTouchMove = (event) => {
+  if (!contentResizing.value) return
+  const touch = event.touches?.[0]
+  if (!touch) return
+  const dx = touch.clientX - contentResizeStart.value.x
+  const dy = touch.clientY - contentResizeStart.value.y
+  const baseDenominator = Math.max(playerWidth.value, playerHeight.value, 200)
+  const scaleDelta = (dx - dy) / baseDenominator
+  const nextScale = Math.max(0.5, Math.min(5, contentResizeStart.value.scale + scaleDelta))
+  contentScale.value = Math.round(nextScale * 100) / 100
+}
+
+const startContentResizeWithPoint = (x, y) => {
+  contentResizing.value = true
+  contentResizeStart.value = { x, y, scale: contentScale.value }
+  if (typeof window !== 'undefined') {
+    window.addEventListener('mousemove', handleContentResizeMove, true)
+    window.addEventListener('mouseup', stopContentResize, true)
+    window.addEventListener('touchmove', handleContentResizeTouchMove, { capture: true, passive: false })
+    window.addEventListener('touchend', stopContentResize, true)
+    window.addEventListener('touchcancel', stopContentResize, true)
+  }
+}
+
+const handleContentResizeMouseDown = (event) => {
+  event.preventDefault?.()
+  startContentResizeWithPoint(event.clientX, event.clientY)
+}
+
+const handleContentResizeTouchStart = (event) => {
+  const touch = event.touches?.[0]
+  if (!touch) return
+  event.preventDefault?.()
+  startContentResizeWithPoint(touch.clientX, touch.clientY)
+}
+
 onBeforeUnmount(() => {
   stopResize()
+  stopContentResize()
 })
 
 const videoContainerStyle = computed(() => ({
@@ -225,13 +322,22 @@ const videoContainerStyle = computed(() => ({
   height: `${playerHeight.value}px`,
   maxWidth: 'calc(100vw - 2rem)',
   maxHeight: 'calc(100vh - 2rem)',
-  userSelect: resizing.value ? 'none' : ''
+  userSelect: resizing.value ? 'none' : '',
+  overflow: 'hidden'
+}))
+
+const contentStyle = computed(() => ({
+  transform: `scale(${contentScale.value})`,
+  transformOrigin: 'center center',
+  width: '100%',
+  height: '100%'
 }))
 
 defineExpose({
   getPlayerSize: () => ({
     playerWidth: playerWidth.value,
-    playerHeight: playerHeight.value
+    playerHeight: playerHeight.value,
+    contentScale: contentScale.value
   })
 })
 </script>
@@ -287,5 +393,17 @@ defineExpose({
   border-radius: 9999px;
   box-shadow: 0 8px 20px rgba(0, 0, 0, 0.35);
   cursor: nwse-resize;
+}
+
+.content-resize-handle {
+  position: absolute;
+  right: -8px;
+  top: -8px;
+  width: 24px;
+  height: 24px;
+  background: rgba(255, 255, 255, 0.85);
+  border-radius: 9999px;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.35);
+  cursor: nesw-resize;
 }
 </style>

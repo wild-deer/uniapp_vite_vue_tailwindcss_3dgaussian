@@ -51,7 +51,7 @@
 
     <!-- 状态显示 -->
     <view 
-      v-if="sceneStore.loading || sceneStore.status !== '场景加载完成'" 
+      v-if="!sceneStore.playingVideo && (sceneStore.loading || sceneStore.status !== '场景加载完成')" 
       class="absolute top-20 left-4 bg-black/70 backdrop-blur-md p-4 rounded-lg max-w-xs"
     >
       <text class="text-white text-sm">{{ sceneStore.status }}</text>
