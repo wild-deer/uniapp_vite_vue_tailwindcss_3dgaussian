@@ -54,17 +54,17 @@ export default defineConfig({
   server: {
     host: '0.0.0.0',
     port: 5173,
-    https: {
-      key: fs.readFileSync(path.resolve(path.dirname(fileURLToPath(import.meta.url)), 'key.pem')),
-      cert: fs.readFileSync(path.resolve(path.dirname(fileURLToPath(import.meta.url)), 'cert.pem'))
-    },
-    headers: {
-      'Cross-Origin-Opener-Policy': 'same-origin',
-      'Cross-Origin-Embedder-Policy': 'require-corp'
-    },
+    // https: {
+    //   key: fs.readFileSync(path.resolve(path.dirname(fileURLToPath(import.meta.url)), 'key.pem')),
+    //   cert: fs.readFileSync(path.resolve(path.dirname(fileURLToPath(import.meta.url)), 'cert.pem'))
+    // },
+    // headers: {
+    //   'Cross-Origin-Opener-Policy': 'same-origin',
+    //   'Cross-Origin-Embedder-Policy': 'require-corp'
+    // },
     proxy: {
       '/fileserver': {
-        target: 'https://192.168.1.68:8443/download',
+        target: 'http://192.168.1.68:8443/download',
         changeOrigin: true,
         secure: false, // 如果目标服务器使用自签名证书，设置为false
         rewrite: (path) => path.replace(/^\/fileserver/, '')

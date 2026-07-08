@@ -29,6 +29,18 @@ const disposeObjectResources = (object3D) => {
   disposeMaterial(object3D.material)
 }
 
+const disposeObjectTree = (object3D) => {
+  if (!object3D) {
+    return
+  }
+
+  if (object3D.children && object3D.children.length > 0) {
+    object3D.children.forEach((child) => disposeObjectTree(child))
+  }
+
+  disposeObjectResources(object3D)
+}
+
 export const logMemoryUsage = () => {
   if (performance.memory) {
     const memory = performance.memory
@@ -69,7 +81,7 @@ export const checkCleanupStatus = (sceneResources) => {
 export const clearThreeScene = (threeScene) => {
   while (threeScene.children.length > 0) {
     const child = threeScene.children[0]
-    disposeObjectResources(child)
+    disposeObjectTree(child)
     threeScene.remove(child)
   }
 }

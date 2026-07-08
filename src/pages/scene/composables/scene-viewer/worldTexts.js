@@ -15,53 +15,36 @@ const formatNumber = (value) => {
 
 const formatVector = (values = []) => values.map((value) => formatNumber(value))
 
-const serializeConfigValue = (value, indent = '  ') => {
-  if (Array.isArray(value)) {
-    return `[${value.map((item) => serializeConfigValue(item, indent)).join(', ')}]`
-  }
+const resolvePosition = (position = [0, 5, 0]) => {
+  const [x = 0, y = 5, z = 0] = Array.isArray(position) ? position : []
+  return [Number(x) || 0, Number(y) || 0, Number(z) || 0]
+}
 
-  if (value && typeof value === 'object') {
-    const entries = Object.entries(value)
-    if (!entries.length) {
-      return '{}'
-    }
-
-    const nextIndent = `${indent}  `
-
-    return [
-      '{',
-      ...entries.map(([key, entryValue]) => `${nextIndent}${key}: ${serializeConfigValue(entryValue, nextIndent)},`),
-      `${indent}}`
-    ].join('\n')
-  }
-
-  if (typeof value === 'string') {
-    return `'${value.replace(/\\/g, '\\\\').replace(/'/g, "\\'")}'`
-  }
-
-  if (typeof value === 'number') {
-    return formatNumber(value)
-  }
-
-  if (typeof value === 'boolean') {
-    return value ? 'true' : 'false'
-  }
-
-  if (value === null) {
-    return 'null'
-  }
-
-  return JSON.stringify(value)
+const resolveScale = (scale = [8, 2, 1]) => {
+  const [x = 8, y = 2, z = 1] = Array.isArray(scale) ? scale : []
+  return [Number(x) || 0, Number(y) || 0, Number(z) || 0]
 }
 
 const serializeConfigObject = (config = {}) => {
-  const entries = Object.entries(config)
+  const normalizeExportValue = (value) => {
+    if (Array.isArray(value)) {
+      return value.map((item) => normalizeExportValue(item))
+    }
 
-  return [
-    '{',
-    ...entries.map(([key, value]) => `  ${key}: ${serializeConfigValue(value, '  ')},`),
-    '}'
-  ].join('\n')
+    if (value && typeof value === 'object') {
+      return Object.fromEntries(
+        Object.entries(value).map(([key, entryValue]) => [key, normalizeExportValue(entryValue)])
+      )
+    }
+
+    if (typeof value === 'number') {
+      return Number(formatNumber(value))
+    }
+
+    return value
+  }
+
+  return JSON.stringify(normalizeExportValue(config), null, 2)
 }
 
 const resolveUpDirection = (up = [0, 1, 0]) => {
@@ -278,9 +261,11 @@ export const createWorldText = (config = {}, index = -1) => {
 
   const geometry = new THREE.PlaneGeometry(1, 1)
   const textMesh = new THREE.Mesh(geometry, material)
-  textMesh.position.set(...position)
+  const safePosition = resolvePosition(position)
+  const safeScale = resolveScale(scale)
+  textMesh.position.set(...safePosition)
   applyPanelOrientation(textMesh, up, angle, tiltAngle, rollAngle)
-  textMesh.scale.set(...scale)
+  textMesh.scale.set(...safeScale)
   textMesh.renderOrder = renderOrder
   textMesh.userData = {
     ...textMesh.userData,
@@ -291,8 +276,8 @@ export const createWorldText = (config = {}, index = -1) => {
       tiltAngle: Number(tiltAngle) || 0,
       rollAngle: Number(rollAngle) || 0,
       up: resolveUpDirection(up).toArray(),
-      position,
-      scale
+      position: safePosition,
+      scale: safeScale
     })
   }
   textMesh.userData.worldTextBaseColor = material.color.getStyle()
@@ -349,6 +334,36 @@ export const updateWorldTextRollAngle = (worldTextMesh, rollAngle = 0) => {
   worldTextMesh.userData.worldTextConfig = {
     ...(worldTextMesh.userData.worldTextConfig || {}),
     rollAngle: safeRollAngle
+  }
+
+  return true
+}
+
+export const updateWorldTextPosition = (worldTextMesh, position = [0, 0, 0]) => {
+  if (!worldTextMesh?.userData?.isWorldText) {
+    return false
+  }
+
+  const safePosition = resolvePosition(position)
+  worldTextMesh.position.set(...safePosition)
+  worldTextMesh.userData.worldTextConfig = {
+    ...(worldTextMesh.userData.worldTextConfig || {}),
+    position: safePosition
+  }
+
+  return true
+}
+
+export const updateWorldTextScale = (worldTextMesh, scale = [1, 1, 1]) => {
+  if (!worldTextMesh?.userData?.isWorldText) {
+    return false
+  }
+
+  const safeScale = resolveScale(scale)
+  worldTextMesh.scale.set(...safeScale)
+  worldTextMesh.userData.worldTextConfig = {
+    ...(worldTextMesh.userData.worldTextConfig || {}),
+    scale: safeScale
   }
 
   return true

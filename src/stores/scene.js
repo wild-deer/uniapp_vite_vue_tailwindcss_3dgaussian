@@ -5,6 +5,7 @@ const createDefaultSceneConfig = () => ({
   billboards: [],
   worldTexts: [],
   models3D: [],
+  irregularCubes: [],
   gaussianSplats: [],
   videos: [],
   camera: {
@@ -26,6 +27,8 @@ export const useSceneStore = defineStore('scene', () => {
   const hasSceneConfig = ref(false)
   const sceneConfig = ref(createDefaultSceneConfig())
   const interactionLocked = ref(false)
+  const showAxesHelper = ref(false)
+  const showIrregularCubes = ref(false)
 
   const setLoading = (value) => {
     loading.value = !!value
@@ -67,6 +70,14 @@ export const useSceneStore = defineStore('scene', () => {
 
   const setInteractionLocked = (value) => {
     interactionLocked.value = !!value
+  }
+
+  const toggleAxesHelper = () => {
+    showAxesHelper.value = !showAxesHelper.value
+  }
+
+  const toggleIrregularCubes = () => {
+    showIrregularCubes.value = !showIrregularCubes.value
   }
 
   const resetSceneConfig = () => {
@@ -150,6 +161,8 @@ export const useSceneStore = defineStore('scene', () => {
     hasSceneConfig,
     sceneConfig,
     interactionLocked,
+    showAxesHelper,
+    showIrregularCubes,
     setLoading,
     setStatus,
     setIsDevelopment,
@@ -160,6 +173,8 @@ export const useSceneStore = defineStore('scene', () => {
     startVideoPlayback,
     stopVideoPlayback,
     setInteractionLocked,
+    toggleAxesHelper,
+    toggleIrregularCubes,
     resetSceneConfig,
     mergeSceneConfig,
     setSceneConfig,

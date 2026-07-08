@@ -43,8 +43,10 @@ export const loadGaussianSplats = async (gaussianViewer, sceneStore, sceneResour
 
     try {
       const scene = await gaussianViewer.addSplatScene(splatConfig.url, {
-        splatAlphaRemovalThreshold: 5,
+        splatAlphaRemovalThreshold: 1,
         showLoadingUI: true,
+        gpuAcceleratedSort: true,
+         sphericalHarmonicsDegree: 0, 
         progressiveLoad: false,
         position: splatConfig.position,
         rotation: normalizeRotationToQuaternion(splatConfig.rotation),

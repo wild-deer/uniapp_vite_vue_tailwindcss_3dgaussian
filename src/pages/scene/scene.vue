@@ -10,6 +10,10 @@
       :selected-world-text-angle="selectedWorldTextAngleValue"
       :selected-world-text-tilt-angle="selectedWorldTextTiltAngleValue"
       :selected-world-text-roll-angle="selectedWorldTextRollAngleValue"
+      :selected-world-text-position="selectedWorldTextPositionValue"
+      :selected-world-text-scale="selectedWorldTextScaleValue"
+      :show-axes-helper="sceneStore.showAxesHelper"
+      :show-irregular-cubes="sceneStore.showIrregularCubes"
       @back="goBack"
       @toggle-controls="sceneStore.toggleControls"
       @select-video="selectVideo"
@@ -18,11 +22,16 @@
       @update-world-text-angle="updateWorldTextAngle"
       @update-world-text-tilt-angle="updateWorldTextTiltAngle"
       @update-world-text-roll-angle="updateWorldTextRollAngle"
+      @update-world-text-position="updateWorldTextPosition"
+      @update-world-text-scale="updateWorldTextScale"
       @copy-world-text="copyWorldTextConfig"
+      @copy-video-player-size="copyVideoPlayerSize"
       @reset-camera="resetCamera"
       @close-video="exitVideo"
       @copy-camera="copyCameraView"
       @log-memory="logMemoryUsage"
+      @toggle-axes-helper="sceneStore.toggleAxesHelper"
+      @toggle-irregular-cubes="sceneStore.toggleIrregularCubes"
     />
 
     <!-- 3D场景容器 -->
@@ -54,6 +63,7 @@
       @close="sceneStore.toggleControls"
     />
     <SceneVideoModal
+      ref="videoModalRef"
       :playing-video="sceneStore.playingVideo"
       :active-video="sceneStore.activeVideo"
     />
@@ -61,20 +71,21 @@
 </template>
 
 <script setup>
-import { computed, onMounted, onBeforeUnmount, watch } from 'vue'
-import { onLoad } from '@dcloudio/uni-app'
+import { onMounted, onBeforeUnmount, ref, watch } from 'vue'
 import SceneNavbar from './components/SceneNavbar.vue'
 import SceneControlsPanel from './components/SceneControlsPanel.vue'
 import SceneVideoModal from './components/SceneVideoModal.vue'
 import { useSceneStore } from '../../stores/scene'
+import { useSceneConfigLoader } from './composables/useSceneConfigLoader'
+import { useSceneVideoPlayback } from './composables/useSceneVideoPlayback'
+import { useSceneNavbarActions } from './composables/useSceneNavbarActions'
 
 // #ifdef H5
-import * as THREE from 'three'
 import { useSceneViewer } from './composables/useSceneViewer'
 // #endif
 
 const sceneStore = useSceneStore()
-let routeOptions = {}
+const videoModalRef = ref(null)
 
 let viewer
 let initViewer
@@ -90,95 +101,67 @@ let selectedWorldTextIndex
 let selectedWorldTextAngle
 let selectedWorldTextTiltAngle
 let selectedWorldTextRollAngle
+let selectedWorldTextPosition
+let selectedWorldTextScale
 let selectWorldTextByIndex
 let setSelectedWorldTextAngle
 let setSelectedWorldTextTiltAngle
 let setSelectedWorldTextRollAngle
+let setSelectedWorldTextPosition
+let setSelectedWorldTextScale
 
 // #ifdef H5
-;({ viewer, initViewer, performCompleteCleanup, logMemoryUsage, resetCameraView, moveCameraToView, setViewerInteractionLocked, setWorldTextDebugEnabled, copySelectedWorldText, worldTextDebugOptions, selectedWorldTextIndex, selectedWorldTextAngle, selectedWorldTextTiltAngle, selectedWorldTextRollAngle, selectWorldTextByIndex, setSelectedWorldTextAngle, setSelectedWorldTextTiltAngle, setSelectedWorldTextRollAngle } =
+;({ viewer, initViewer, performCompleteCleanup, logMemoryUsage, resetCameraView, moveCameraToView, setViewerInteractionLocked, setWorldTextDebugEnabled, copySelectedWorldText, worldTextDebugOptions, selectedWorldTextIndex, selectedWorldTextAngle, selectedWorldTextTiltAngle, selectedWorldTextRollAngle, selectedWorldTextPosition, selectedWorldTextScale, selectWorldTextByIndex, setSelectedWorldTextAngle, setSelectedWorldTextTiltAngle, setSelectedWorldTextRollAngle, setSelectedWorldTextPosition, setSelectedWorldTextScale } =
   useSceneViewer(sceneStore))
 // #endif
 
-const normalizeRouteParam = (value) => Array.isArray(value) ? value[0] : value
+const { ensureSceneConfigReady } = useSceneConfigLoader(sceneStore)
 
-const decodeRouteParam = (value) => {
-  const normalizedValue = normalizeRouteParam(value)
-  if (!normalizedValue) return ''
+const {
+  availableVideos,
+  selectVideo,
+  closeVideo,
+  cancelPendingVideoPlayback
+} = useSceneVideoPlayback(sceneStore, { moveCameraToView })
 
-  try {
-    return decodeURIComponent(normalizedValue)
-  } catch (error) {
-    console.warn('路由参数解码失败，使用原始值:', normalizedValue, error)
-    return normalizedValue
-  }
-}
-
-const parseSceneConfigResponse = (rawData) => {
-  const parsedData = typeof rawData === 'string' ? JSON.parse(rawData) : rawData
-
-  if (!parsedData || typeof parsedData !== 'object' || Array.isArray(parsedData)) {
-    throw new Error('场景配置格式无效')
-  }
-
-  return parsedData
-}
-
-const requestSceneConfig = (sceneConfigUrl) => new Promise((resolve, reject) => {
-  uni.request({
-    url: sceneConfigUrl,
-    method: 'GET',
-    success: (response) => {
-      if (response.statusCode < 200 || response.statusCode >= 300) {
-        reject(new Error(`HTTP ${response.statusCode}`))
-        return
-      }
-
-      try {
-        resolve(parseSceneConfigResponse(response.data))
-      } catch (error) {
-        reject(error)
-      }
-    },
-    fail: reject
-  })
-})
-
-const ensureSceneConfigReady = async () => {
-  if (sceneStore.hasSceneConfig) {
-    return true
-  }
-
-  const sceneConfigUrl = decodeRouteParam(routeOptions.sceneConfigUrl)
-  if (!sceneConfigUrl) {
-    return false
-  }
-
-  sceneStore.setLoading(true)
-  sceneStore.setStatus('正在下载场景配置...')
-
-  try {
-    const remoteSceneConfig = await requestSceneConfig(sceneConfigUrl)
-    sceneStore.setSceneConfig(remoteSceneConfig)
-    sceneStore.setLoading(false)
-    sceneStore.setStatus('场景配置下载完成')
-    console.log('📥 场景配置下载成功:', sceneConfigUrl, remoteSceneConfig)
-    return true
-  } catch (error) {
-    sceneStore.resetSceneConfig()
-    sceneStore.setLoading(false)
-    sceneStore.setStatus(`场景配置下载失败: ${error.message}`)
-    console.error('❌ 场景配置下载失败:', sceneConfigUrl, error)
-    uni.showToast({
-      title: '场景配置下载失败',
-      icon: 'none'
-    })
-    return false
-  }
-}
-
-onLoad((options) => {
-  routeOptions = options || {}
+const {
+  worldTextOptions,
+  selectedWorldTextAngleValue,
+  selectedWorldTextTiltAngleValue,
+  selectedWorldTextRollAngleValue,
+  selectedWorldTextPositionValue,
+  selectedWorldTextScaleValue,
+  selectedWorldTextIndexValue,
+  selectWorldText,
+  updateWorldTextAngle,
+  updateWorldTextTiltAngle,
+  updateWorldTextRollAngle,
+  updateWorldTextPosition,
+  updateWorldTextScale,
+  copyWorldTextConfig,
+  resetCamera,
+  exitVideo,
+  copyCameraView,
+  copyVideoPlayerSize
+} = useSceneNavbarActions(sceneStore, {
+  videoModalRef,
+  viewer,
+  closeVideo,
+  resetCameraView,
+  copySelectedWorldText,
+  worldTextDebugOptions,
+  selectedWorldTextIndex,
+  selectedWorldTextAngle,
+  selectedWorldTextTiltAngle,
+  selectedWorldTextRollAngle,
+  selectedWorldTextPosition,
+  selectedWorldTextScale,
+  selectWorldTextByIndex,
+  setSelectedWorldTextAngle,
+  setSelectedWorldTextTiltAngle,
+  setSelectedWorldTextRollAngle,
+  setSelectedWorldTextPosition,
+  setSelectedWorldTextScale
 })
 
 onMounted(async () => {
@@ -203,12 +186,17 @@ onMounted(async () => {
   // #endif
 })
 
-onBeforeUnmount(() => {
-  // 执行完美清理
+const cleanupScene = () => {
+  cancelPendingVideoPlayback()
   sceneStore.stopVideoPlayback()
   sceneStore.setInteractionLocked(false)
   setViewerInteractionLocked?.(false)
   performCompleteCleanup?.()
+}
+
+onBeforeUnmount(() => {
+  // 执行完美清理
+  cleanupScene()
 })
 
 watch(
@@ -223,225 +211,14 @@ watch(
 // 方法定义
 const goBack = () => {
   // 在页面跳转前执行完美清理
-  sceneStore.stopVideoPlayback()
-  sceneStore.setInteractionLocked(false)
-  setViewerInteractionLocked?.(false)
-  performCompleteCleanup?.()
+  cleanupScene()
   
   uni.redirectTo({
     url: '/pages/index/index'
   })
 }
 
-const availableVideos = computed(() => (Array.isArray(sceneStore.sceneConfig?.videos) ? sceneStore.sceneConfig.videos : []))
-
-const normalizeVideoUrl = (value) => {
-  if (typeof value !== 'string') return ''
-  return value.trim()
-}
-
-const getVideoUrl = (video) => {
-  if (!video) return ''
-  if (typeof video === 'string') return normalizeVideoUrl(video)
-  return normalizeVideoUrl(video.url || video.videoUrl || video.src)
-}
-
 const toggleDebugMode = () => {
   sceneStore.toggleDebugMode()
-}
-
-const worldTextOptions = computed(() => worldTextDebugOptions?.value || [])
-const selectedWorldTextAngleValue = computed(() => selectedWorldTextAngle?.value || 0)
-const selectedWorldTextTiltAngleValue = computed(() => selectedWorldTextTiltAngle?.value || 0)
-const selectedWorldTextRollAngleValue = computed(() => selectedWorldTextRollAngle?.value || 0)
-const selectedWorldTextIndexValue = computed(() => selectedWorldTextIndex?.value ?? -1)
-
-const selectWorldText = (index) => {
-  const selected = selectWorldTextByIndex?.(index)
-  if (!selected) {
-    uni.showToast({
-      title: '标牌选择失败',
-      icon: 'none'
-    })
-  }
-}
-
-const updateWorldTextAngle = (angle) => {
-  const updated = setSelectedWorldTextAngle?.(angle)
-  if (!updated && sceneStore.debugMode) {
-    uni.showToast({
-      title: '请先选择一个标牌',
-      icon: 'none'
-    })
-  }
-}
-
-const updateWorldTextTiltAngle = (tiltAngle) => {
-  const updated = setSelectedWorldTextTiltAngle?.(tiltAngle)
-  if (!updated && sceneStore.debugMode) {
-    uni.showToast({
-      title: '请先选择一个标牌',
-      icon: 'none'
-    })
-  }
-}
-
-const updateWorldTextRollAngle = (rollAngle) => {
-  const updated = setSelectedWorldTextRollAngle?.(rollAngle)
-  if (!updated && sceneStore.debugMode) {
-    uni.showToast({
-      title: '请先选择一个标牌',
-      icon: 'none'
-    })
-  }
-}
-
-const copyWorldTextConfig = () => {
-  const data = copySelectedWorldText?.()
-  if (!data) {
-    uni.showToast({
-      title: '请先开启调试并选中标牌',
-      icon: 'none'
-    })
-    return
-  }
-
-  uni.setClipboardData({
-    data,
-    success: () => {
-      uni.showToast({
-        title: '已复制标牌参数',
-        icon: 'success'
-      })
-    },
-    fail: () => {
-      uni.showToast({
-        title: '复制失败',
-        icon: 'none'
-      })
-    }
-  })
-}
-
-const getVideoCameraView = (video) => {
-  const position = video?.camera?.position || video?.position
-  const lookAt = video?.camera?.lookAt || video?.lookAt
-  const up = video?.camera?.up || video?.up
-  const duration = Number.isFinite(video?.camera?.duration) ? video.camera.duration : video?.duration
-
-  return {
-    position,
-    lookAt,
-    ...(up ? { up } : {}),
-    ...(Number.isFinite(duration) ? { duration } : {})
-  }
-}
-
-const selectVideo = async (video) => {
-  const url = getVideoUrl(video)
-  if (!url) {
-    uni.showToast({
-      title: '视频地址缺失',
-      icon: 'none'
-    })
-    return
-  }
-
-  sceneStore.setInteractionLocked(true)
-
-  const cameraView = getVideoCameraView(video)
-  sceneStore.setStatus('正在切换镜头...')
-
-  const moved = await moveCameraToView?.(cameraView)
-  if (!moved) {
-    sceneStore.setInteractionLocked(false)
-    uni.showToast({
-      title: '镜头切换失败',
-      icon: 'none'
-    })
-    return
-  }
-
-  sceneStore.startVideoPlayback({
-    ...(typeof video === 'object' ? video : null),
-    url
-  })
-  sceneStore.setStatus('视频播放中')
-}
-
-const closeVideo = () => {
-  sceneStore.stopVideoPlayback()
-  sceneStore.setInteractionLocked(false)
-  sceneStore.setStatus('场景加载完成')
-}
-
-const exitVideo = () => {
-  closeVideo()
-  resetCamera()
-}
-
-const copyCameraView = () => {
-  const gaussianViewer = viewer?.value
-  const camera = gaussianViewer?.camera
-
-  if (!camera) {
-    uni.showToast({
-      title: '当前平台不支持复制镜头',
-      icon: 'none'
-    })
-    return
-  }
-
-  const formatNumber = (value) => {
-    if (typeof value !== 'number' || !Number.isFinite(value)) return String(value)
-    return value.toFixed(5).replace(/\.?0+$/, '')
-  }
-
-  const formatVector3 = (vec3) => [
-    formatNumber(vec3.x),
-    formatNumber(vec3.y),
-    formatNumber(vec3.z)
-  ]
-
-  const position = formatVector3(camera.position)
-
-  let lookAtVec = gaussianViewer?.controls?.target?.clone?.()
-  if (!lookAtVec) {
-    const direction = new THREE.Vector3()
-    camera.getWorldDirection(direction)
-    lookAtVec = camera.position.clone().add(direction)
-  }
-  const lookAt = formatVector3(lookAtVec)
-
-  const data = `position: [${position.join(', ')}],\nlookAt: [${lookAt.join(', ')}],`
-
-  uni.setClipboardData({
-    data,
-    success: () => {
-      uni.showToast({
-        title: '已复制镜头参数',
-        icon: 'success'
-      })
-    },
-    fail: () => {
-      uni.showToast({
-        title: '复制失败',
-        icon: 'none'
-      })
-    }
-  })
-}
-
-const resetCamera = () => {
-  const hasReset = resetCameraView?.()
-  if (hasReset) {
-    sceneStore.setStatus('镜头已重置')
-    return
-  }
-
-  uni.showToast({
-    title: '当前平台不支持重置镜头',
-    icon: 'none'
-  })
 }
 </script>

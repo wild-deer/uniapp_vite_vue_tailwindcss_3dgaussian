@@ -103,7 +103,7 @@ const scenes = ref([
     size: '中型',
     quality: '高质量',
     status: '可用',
-    sceneConfigUrl: '/fileserver/model/办公室/办公室.json'
+    sceneConfigUrl: '/fileserver/model/office/office.json'
   },
 // {
 //     title: '人物',
