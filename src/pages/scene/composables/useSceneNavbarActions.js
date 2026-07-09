@@ -172,8 +172,43 @@ export function useSceneNavbarActions(sceneStore, deps) {
       return
     }
 
-    const data = `"playerWidth": ${Math.round(width)},\n"playerHeight": ${Math.round(height)},\n"contentScale": ${size.contentScale ?? 1}`
+    const clipTop = Number(size?.clipTop) || 0
+    const clipRight = Number(size?.clipRight) || 0
+    const clipBottom = Number(size?.clipBottom) || 0
+    const clipLeft = Number(size?.clipLeft) || 0
+    const hasClip = clipTop || clipRight || clipBottom || clipLeft
+    const featherEdge = size?.featherEdge === true
+    const featherRadius = Number(size?.featherRadius) || 30
+
+    let data = `"playerWidth": ${Math.round(width)},\n"playerHeight": ${Math.round(height)},\n"contentScale": ${size.contentScale ?? 1}`
+    if (hasClip) {
+      data += `,\n"clipTop": ${clipTop},\n"clipRight": ${clipRight},\n"clipBottom": ${clipBottom},\n"clipLeft": ${clipLeft}`
+    }
+    if (featherEdge) {
+      data += `,\n"featherEdge": true,\n"featherRadius": ${featherRadius}`
+    }
     copyToClipboard(data, '已复制播放尺寸')
+  }
+
+  const updateVideoOffset = ({ edge, value }) => {
+    const setter = videoModalRef.value?.setVideoOffset
+    if (typeof setter === 'function') {
+      setter(edge, value)
+    }
+  }
+
+  const updateFeatherEnabled = (enabled) => {
+    const setter = videoModalRef.value?.setFeatherEnabled
+    if (typeof setter === 'function') {
+      setter(enabled)
+    }
+  }
+
+  const updateFeatherRadius = (radius) => {
+    const setter = videoModalRef.value?.setFeatherRadius
+    if (typeof setter === 'function') {
+      setter(radius)
+    }
   }
 
   return {
@@ -194,7 +229,10 @@ export function useSceneNavbarActions(sceneStore, deps) {
     resetCamera,
     exitVideo,
     copyCameraView,
-    copyVideoPlayerSize
+    copyVideoPlayerSize,
+    updateVideoOffset,
+    updateFeatherEnabled,
+    updateFeatherRadius
   }
 }
 

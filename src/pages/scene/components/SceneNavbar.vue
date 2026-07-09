@@ -20,19 +20,11 @@
     <!-- 右侧：操作区 -->
     <view class="absolute right-4 flex items-center space-x-2!">
       <view
-        v-if="cameraPickerOpen || worldTextPickerOpen"
+        v-if="cameraPickerOpen || worldTextPickerOpen || videoPositionPickerOpen"
         class="fixed inset-0 z-[2147483646]"
         @click="closeAllPickers"
       />
 
-      <button
-        v-if="playingVideo"
-        @click="$emit('close-video')"
-        class="flex items-center space-x-1 px-3 py-1 bg-rose-950/40 border border-rose-500/30 text-rose-300 rounded-sm hover:bg-rose-500/20 hover:border-rose-400 transition-all duration-300 text-sm"
-      >
-        <text class="text-xs font-mono">×</text>
-        <text class="font-light text-xs tracking-wide">退出</text>
-      </button>
       <view v-if="cameraOptions.length" class="relative">
         <button
           @click="toggleCameraPicker"
@@ -115,6 +107,98 @@
         <text class="text-xs font-mono">📐</text>
         <text class="font-light text-xs tracking-wide">尺寸</text>
       </button>
+
+      <!-- 视频位置控制 -->
+      <view v-if="debugMode && playingVideo" class="relative">
+        <button
+          @click="toggleVideoPositionPicker"
+          class="flex items-center space-x-1 px-3 py-1 bg-slate-900/50 border border-slate-700 text-slate-300 rounded-sm hover:border-cyan-500/50 hover:text-cyan-400 transition-all duration-300 text-sm"
+        >
+          <text class="text-xs font-mono">📍</text>
+          <text class="font-light text-xs tracking-wide">视频裁剪</text>
+          <text
+            class="text-xs font-mono opacity-70 transition-transform duration-200"
+            :class="videoPositionPickerOpen ? 'rotate-180' : ''"
+          >
+            ▾
+          </text>
+        </button>
+        <view
+          v-if="videoPositionPickerOpen"
+          class="absolute right-0 top-full mt-1 z-[2147483647] w-44 bg-slate-950/85 border border-slate-700 rounded-sm overflow-hidden backdrop-blur-xl shadow-[0_10px_30px_rgba(0,0,0,0.65)]"
+        >
+          <view class="p-3 flex flex-col gap-2">
+            <text class="text-[11px] font-mono tracking-wide text-cyan-300">视频裁剪 (px)</text>
+            <view
+              v-for="edge in videoPositionEdges"
+              :key="edge.key"
+              class="flex items-center justify-between gap-2"
+            >
+              <text class="text-[10px] font-mono text-slate-400 w-8">{{ edge.label }}</text>
+              <input
+                :value="videoPositionInputs[edge.key]"
+                :placeholder="'0'"
+                placeholder-class="scene-debug-input-placeholder"
+                class="flex-1 h-7 px-2 text-[11px] font-mono text-slate-200 bg-slate-900/70 border border-slate-700 rounded-sm focus:border-cyan-500/50"
+                @input="handleVideoPositionInput(edge.key, $event)"
+                @confirm="submitVideoPosition(edge.key)"
+                @blur="submitVideoPosition(edge.key)"
+              />
+            </view>
+          </view>
+        </view>
+      </view>
+
+      <!-- 羽化控制 -->
+      <view v-if="debugMode && playingVideo" class="relative">
+        <button
+          @click="toggleFeatherPicker"
+          class="flex items-center space-x-1 px-3 py-1 rounded-sm transition-all duration-300 text-sm"
+          :class="featherEnabled ? 'bg-cyan-950/40 border border-cyan-500/30 text-cyan-400 hover:bg-cyan-500/20' : 'bg-slate-900/50 border border-slate-700 text-slate-300 hover:border-cyan-500/50 hover:text-cyan-400'"
+        >
+          <text class="text-xs font-mono">🌫️</text>
+          <text class="font-light text-xs tracking-wide">羽化</text>
+          <text
+            class="text-xs font-mono opacity-70 transition-transform duration-200"
+            :class="featherPickerOpen ? 'rotate-180' : ''"
+          >
+            ▾
+          </text>
+        </button>
+        <view
+          v-if="featherPickerOpen"
+          class="absolute right-0 top-full mt-1 z-[2147483647] w-44 bg-slate-950/85 border border-slate-700 rounded-sm overflow-hidden backdrop-blur-xl shadow-[0_10px_30px_rgba(0,0,0,0.65)]"
+        >
+          <view class="p-3 flex flex-col gap-3">
+            <text class="text-[11px] font-mono tracking-wide text-cyan-300">边缘羽化</text>
+            <view class="flex items-center justify-between">
+              <text class="text-[10px] font-mono text-slate-400">启用</text>
+              <view
+                class="w-9 h-5 rounded-full cursor-pointer transition-colors duration-200"
+                :class="featherEnabled ? 'bg-cyan-500' : 'bg-slate-700'"
+                @click="toggleFeatherEnabled"
+              >
+                <view
+                  class="w-3.5 h-3.5 bg-white rounded-full mt-0.5 transition-transform duration-200"
+                  :class="featherEnabled ? 'translate-x-[18px]' : 'translate-x-[3px]'"
+                />
+              </view>
+            </view>
+            <view class="flex items-center justify-between gap-2">
+              <text class="text-[10px] font-mono text-slate-400">半径 %</text>
+              <input
+                :value="featherRadiusInput"
+                placeholder="30"
+                placeholder-class="scene-debug-input-placeholder"
+                class="w-16 h-7 px-2 text-[11px] font-mono text-slate-200 bg-slate-900/70 border border-slate-700 rounded-sm focus:border-cyan-500/50 text-center"
+                @input="handleFeatherRadiusInput($event)"
+                @confirm="submitFeatherRadius"
+                @blur="submitFeatherRadius"
+              />
+            </view>
+          </view>
+        </view>
+      </view>
 
       <SceneWorldTextPicker
         v-if="debugMode"
@@ -242,11 +326,13 @@ const emit = defineEmits([
   'copy-world-text',
   'copy-video-player-size',
   'reset-camera',
-  'close-video',
   'copy-camera',
   'log-memory',
   'toggle-axes-helper',
-  'toggle-irregular-cubes'
+  'toggle-irregular-cubes',
+  'update-video-offset',
+  'update-feather-enabled',
+  'update-feather-radius'
 ])
 
 const videoTitle = (video, index) => {
@@ -259,6 +345,8 @@ const cameraOptions = computed(() =>
 )
 const cameraPickerOpen = ref(false)
 const worldTextPickerOpen = ref(false)
+const videoPositionPickerOpen = ref(false)
+const featherPickerOpen = ref(false)
 
 watch(cameraOptions, (options) => {
   if (!options?.length) cameraPickerOpen.value = false
@@ -267,6 +355,8 @@ watch(cameraOptions, (options) => {
 const toggleCameraPicker = () => {
   if (!cameraOptions.value.length) return
   worldTextPickerOpen.value = false
+  videoPositionPickerOpen.value = false
+  featherPickerOpen.value = false
   cameraPickerOpen.value = !cameraPickerOpen.value
 }
 
@@ -277,6 +367,87 @@ const closeCameraPicker = () => {
 const closeAllPickers = () => {
   closeCameraPicker()
   worldTextPickerOpen.value = false
+  videoPositionPickerOpen.value = false
+  featherPickerOpen.value = false
+}
+
+const videoPositionEdges = [
+  { key: 'top', label: '上' },
+  { key: 'right', label: '右' },
+  { key: 'bottom', label: '下' },
+  { key: 'left', label: '左' }
+]
+
+const videoPositionInputs = ref({
+  top: '',
+  right: '',
+  bottom: '',
+  left: ''
+})
+
+const toggleVideoPositionPicker = () => {
+  cameraPickerOpen.value = false
+  worldTextPickerOpen.value = false
+  featherPickerOpen.value = false
+  videoPositionPickerOpen.value = !videoPositionPickerOpen.value
+}
+
+const resolveVideoPositionInputValue = (event) => {
+  if (typeof event === 'string') return event
+  if (typeof event?.detail?.value === 'string') return event.detail.value
+  if (typeof event?.target?.value === 'string') return event.target.value
+  return ''
+}
+
+const handleVideoPositionInput = (edge, event) => {
+  videoPositionInputs.value = {
+    ...videoPositionInputs.value,
+    [edge]: resolveVideoPositionInputValue(event)
+  }
+}
+
+const submitVideoPosition = (edge) => {
+  const raw = String(videoPositionInputs.value[edge] ?? '').trim()
+  if (!raw) return
+  const numValue = Number(raw)
+  if (!Number.isFinite(numValue)) {
+    uni.showToast({ title: '请输入有效数字', icon: 'none' })
+    return
+  }
+  emit('update-video-offset', { edge, value: numValue })
+}
+
+// --- 羽化控制 ---
+const featherEnabled = ref(false)
+const featherRadiusInput = ref('30')
+
+const toggleFeatherPicker = () => {
+  cameraPickerOpen.value = false
+  worldTextPickerOpen.value = false
+  videoPositionPickerOpen.value = false
+  featherPickerOpen.value = !featherPickerOpen.value
+}
+
+const toggleFeatherEnabled = () => {
+  featherEnabled.value = !featherEnabled.value
+  emit('update-feather-enabled', featherEnabled.value)
+}
+
+const handleFeatherRadiusInput = (event) => {
+  const raw = resolveVideoPositionInputValue(event)
+  featherRadiusInput.value = raw
+}
+
+const submitFeatherRadius = () => {
+  const raw = String(featherRadiusInput.value ?? '').trim()
+  if (!raw) return
+  const num = Number(raw)
+  if (!Number.isFinite(num) || num <= 0 || num >= 100) {
+    uni.showToast({ title: '请输入 1-99 的数值', icon: 'none' })
+    return
+  }
+  featherRadiusInput.value = String(num)
+  emit('update-feather-radius', num)
 }
 
 const selectCamera = (index) => {

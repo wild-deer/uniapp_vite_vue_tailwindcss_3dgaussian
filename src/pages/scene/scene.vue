@@ -32,6 +32,9 @@
       @log-memory="logMemoryUsage"
       @toggle-axes-helper="sceneStore.toggleAxesHelper"
       @toggle-irregular-cubes="sceneStore.toggleIrregularCubes"
+      @update-video-offset="updateVideoOffset"
+      @update-feather-enabled="updateFeatherEnabled"
+      @update-feather-radius="updateFeatherRadius"
     />
 
     <!-- 3D场景容器 -->
@@ -66,6 +69,7 @@
       ref="videoModalRef"
       :playing-video="sceneStore.playingVideo"
       :active-video="sceneStore.activeVideo"
+      @close-video="exitVideo"
     />
   </view>
 </template>
@@ -142,7 +146,10 @@ const {
   resetCamera,
   exitVideo,
   copyCameraView,
-  copyVideoPlayerSize
+  copyVideoPlayerSize,
+  updateVideoOffset,
+  updateFeatherEnabled,
+  updateFeatherRadius
 } = useSceneNavbarActions(sceneStore, {
   videoModalRef,
   viewer,

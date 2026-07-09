@@ -14,6 +14,7 @@
       <!-- pointer-events-auto 恢复视频区域内部的点击事件 -->
       <view
         class="relative pointer-events-auto video-modal-panel"
+        :class="{ 'feather-active': featherEnabled }"
         :style="videoContainerStyle"
       >
         <view class="content-layer" :style="contentStyle">
@@ -32,13 +33,22 @@
             playsinline
           />
         </view>
+        <button
+          @click="$emit('close-video')"
+          :style="closeBtnStyle"
+          class="absolute z-10 w-7 h-7 flex items-center justify-center bg-slate-900/50 border border-slate-500/30 text-slate-300 rounded-sm hover:bg-slate-500/20 hover:border-slate-400 transition-all duration-300"
+        >
+          <text class="text-sm font-mono leading-none">×</text>
+        </button>
         <view
           class="resize-handle"
+          :style="resizeHandleStyle"
           @mousedown.stop="handleResizeMouseDown"
           @touchstart.stop="handleResizeTouchStart"
         />
         <view
           class="content-resize-handle"
+          :style="contentResizeHandleStyle"
           @mousedown.stop="handleContentResizeMouseDown"
           @touchstart.stop="handleContentResizeTouchStart"
         />
@@ -50,6 +60,8 @@
 
 <script setup>
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
+
+const emit = defineEmits(['close-video'])
 
 const props = defineProps({
   playingVideo: {
@@ -143,10 +155,41 @@ const getConfiguredContentScale = (video) => {
   )
 }
 
+const getConfiguredClipOffsets = (video) => {
+  if (!video || typeof video !== 'object') return { top: 0, right: 0, bottom: 0, left: 0 }
+
+  const camera = video.camera && typeof video.camera === 'object' ? video.camera : null
+
+  return {
+    top: camera?.clipTop ?? video.clipTop ?? 0,
+    right: camera?.clipRight ?? video.clipRight ?? 0,
+    bottom: camera?.clipBottom ?? video.clipBottom ?? 0,
+    left: camera?.clipLeft ?? video.clipLeft ?? 0
+  }
+}
+
+const getConfiguredFeatherEdge = (video) => {
+  if (!video || typeof video !== 'object') return false
+  const camera = video.camera && typeof video.camera === 'object' ? video.camera : null
+  const value = camera?.featherEdge ?? video.featherEdge
+  return value === true || value === 'true'
+}
+
+const getConfiguredFeatherRadius = (video) => {
+  if (!video || typeof video !== 'object') return 30
+  const camera = video.camera && typeof video.camera === 'object' ? video.camera : null
+  const value = camera?.featherRadius ?? video.featherRadius
+  if (typeof value === 'number' && Number.isFinite(value) && value > 0 && value < 100) return value
+  return 30
+}
+
 const activeVideoUrl = computed(() => getVideoUrl(props.activeVideo))
 const isRealtimeImageStream = computed(() => isRealtimeStreamUrl(activeVideoUrl.value))
 const configuredPlayerSize = computed(() => getConfiguredPlayerSize(props.activeVideo))
 const configuredContentScale = computed(() => getConfiguredContentScale(props.activeVideo))
+const configuredClipOffsets = computed(() => getConfiguredClipOffsets(props.activeVideo))
+const configuredFeatherEdge = computed(() => getConfiguredFeatherEdge(props.activeVideo))
+const configuredFeatherRadius = computed(() => getConfiguredFeatherRadius(props.activeVideo))
 const playerWidth = ref(defaultPlayerWidth)
 const playerHeight = ref(defaultPlayerHeight)
 const resizing = ref(false)
@@ -155,6 +198,16 @@ const resizeStart = ref({ x: 0, y: 0, width: 0, height: 0 })
 const contentScale = ref(1)
 const contentResizing = ref(false)
 const contentResizeStart = ref({ x: 0, y: 0, scale: 1 })
+
+// 视频面板边缘裁剪 (debug模式下可独立控制四边)
+const offsetTop = ref(0)
+const offsetRight = ref(0)
+const offsetBottom = ref(0)
+const offsetLeft = ref(0)
+
+// 边缘羽化
+const featherEnabled = ref(false)
+const featherRadius = ref(30)
 
 const getViewportSize = () => {
   try {
@@ -197,8 +250,23 @@ const resetContentScaleFromConfig = () => {
   contentScale.value = configuredContentScale.value || defaultContentScale
 }
 
+const resetClipOffsetsFromConfig = () => {
+  const offsets = configuredClipOffsets.value
+  offsetTop.value = offsets.top
+  offsetRight.value = offsets.right
+  offsetBottom.value = offsets.bottom
+  offsetLeft.value = offsets.left
+}
+
+const resetFeatherFromConfig = () => {
+  featherEnabled.value = configuredFeatherEdge.value
+  featherRadius.value = configuredFeatherRadius.value
+}
+
 watch([activeVideoUrl, configuredPlayerSize], resetPlayerSizeFromConfig, { immediate: true })
 watch([activeVideoUrl, configuredContentScale], resetContentScaleFromConfig, { immediate: true })
+watch([activeVideoUrl, configuredClipOffsets], resetClipOffsetsFromConfig, { immediate: true })
+watch([activeVideoUrl, configuredFeatherEdge, configuredFeatherRadius], resetFeatherFromConfig, { immediate: true })
 
 const stopResize = () => {
   if (!resizing.value) return
@@ -269,9 +337,9 @@ const handleContentResizeMove = (event) => {
   if (!contentResizing.value) return
   const dx = event.clientX - contentResizeStart.value.x
   const dy = event.clientY - contentResizeStart.value.y
-  // 右上角拖拽：向右放大，向上放大
+  // 左上角拖拽：向左放大，向上放大
   const baseDenominator = Math.max(playerWidth.value, playerHeight.value, 200)
-  const scaleDelta = (dx - dy) / baseDenominator
+  const scaleDelta = (-dx - dy) / baseDenominator
   const nextScale = Math.max(0.5, Math.min(5, contentResizeStart.value.scale + scaleDelta))
   contentScale.value = Math.round(nextScale * 100) / 100
 }
@@ -283,7 +351,7 @@ const handleContentResizeTouchMove = (event) => {
   const dx = touch.clientX - contentResizeStart.value.x
   const dy = touch.clientY - contentResizeStart.value.y
   const baseDenominator = Math.max(playerWidth.value, playerHeight.value, 200)
-  const scaleDelta = (dx - dy) / baseDenominator
+  const scaleDelta = (-dx - dy) / baseDenominator
   const nextScale = Math.max(0.5, Math.min(5, contentResizeStart.value.scale + scaleDelta))
   contentScale.value = Math.round(nextScale * 100) / 100
 }
@@ -317,14 +385,40 @@ onBeforeUnmount(() => {
   stopContentResize()
 })
 
-const videoContainerStyle = computed(() => ({
-  width: `${playerWidth.value}px`,
-  height: `${playerHeight.value}px`,
-  maxWidth: 'calc(100vw - 2rem)',
-  maxHeight: 'calc(100vh - 2rem)',
-  userSelect: resizing.value ? 'none' : '',
-  overflow: 'hidden'
-}))
+const videoContainerStyle = computed(() => {
+  const style = {
+    width: `${playerWidth.value}px`,
+    height: `${playerHeight.value}px`,
+    maxWidth: 'calc(100vw - 2rem)',
+    maxHeight: 'calc(100vh - 2rem)',
+    userSelect: resizing.value ? 'none' : '',
+    overflow: 'hidden'
+  }
+  const hasOffset = offsetTop.value || offsetRight.value || offsetBottom.value || offsetLeft.value
+  if (hasOffset) {
+    style.clipPath = `inset(${offsetTop.value}px ${offsetRight.value}px ${offsetBottom.value}px ${offsetLeft.value}px)`
+  }
+  if (featherEnabled.value) {
+    const r = featherRadius.value
+    const w = playerWidth.value || 1
+    const h = playerHeight.value || 1
+
+    // 将裁剪偏移量转为百分比，使羽化渐变基于裁剪后的可视区域
+    const leftPct = (offsetLeft.value / w) * 100
+    const rightPct = (offsetRight.value / w) * 100
+    const topPct = (offsetTop.value / h) * 100
+    const bottomPct = (offsetBottom.value / h) * 100
+
+    const hGrad = `linear-gradient(to right, transparent 0%, transparent ${leftPct}%, black ${leftPct + r}%, black ${100 - rightPct - r}%, transparent ${100 - rightPct}%, transparent 100%)`
+    const vGrad = `linear-gradient(to bottom, transparent 0%, transparent ${topPct}%, black ${topPct + r}%, black ${100 - bottomPct - r}%, transparent ${100 - bottomPct}%, transparent 100%)`
+
+    style.WebkitMaskImage = `${hGrad}, ${vGrad}`
+    style.WebkitMaskComposite = 'source-in'
+    style.maskImage = `${hGrad}, ${vGrad}`
+    style.maskComposite = 'intersect'
+  }
+  return style
+})
 
 const contentStyle = computed(() => ({
   transform: `scale(${contentScale.value})`,
@@ -333,12 +427,59 @@ const contentStyle = computed(() => ({
   height: '100%'
 }))
 
+// 三个按钮根据裁剪偏移量动态调整位置，使其始终出现在可视区域边缘
+const closeBtnStyle = computed(() => ({
+  top: `${offsetTop.value + 8}px`,
+  right: `${offsetRight.value + 8}px`
+}))
+
+const resizeHandleStyle = computed(() => ({
+  right: `${offsetRight.value - 8}px`,
+  bottom: `${offsetBottom.value - 8}px`
+}))
+
+const contentResizeHandleStyle = computed(() => ({
+  left: `${offsetLeft.value - 8}px`,
+  top: `${offsetTop.value - 8}px`
+}))
+
 defineExpose({
   getPlayerSize: () => ({
     playerWidth: playerWidth.value,
     playerHeight: playerHeight.value,
-    contentScale: contentScale.value
-  })
+    contentScale: contentScale.value,
+    clipTop: offsetTop.value,
+    clipRight: offsetRight.value,
+    clipBottom: offsetBottom.value,
+    clipLeft: offsetLeft.value,
+    featherEdge: featherEnabled.value,
+    featherRadius: featherRadius.value
+  }),
+  getVideoOffsets: () => ({
+    offsetTop: offsetTop.value,
+    offsetRight: offsetRight.value,
+    offsetBottom: offsetBottom.value,
+    offsetLeft: offsetLeft.value
+  }),
+  setVideoOffset: (edge, value) => {
+    const numValue = Number(value)
+    if (!Number.isFinite(numValue)) return
+    switch (edge) {
+      case 'top': offsetTop.value = numValue; break
+      case 'right': offsetRight.value = numValue; break
+      case 'bottom': offsetBottom.value = numValue; break
+      case 'left': offsetLeft.value = numValue; break
+    }
+  },
+  setFeatherEnabled: (enabled) => {
+    featherEnabled.value = !!enabled
+  },
+  setFeatherRadius: (value) => {
+    const num = Number(value)
+    if (Number.isFinite(num) && num > 0 && num < 100) {
+      featherRadius.value = num
+    }
+  }
 })
 </script>
 
@@ -366,6 +507,8 @@ defineExpose({
 .video-modal-panel {
   transition: opacity 1s ease, transform 1s ease;
 }
+
+/* 羽化 mask 由 videoContainerStyle 内联样式动态注入，此处不设静态值 */
 
 .transparent-fade-enter-active,
 .transparent-fade-leave-active {
@@ -397,13 +540,24 @@ defineExpose({
 
 .content-resize-handle {
   position: absolute;
-  right: -8px;
+  left: -8px;
   top: -8px;
   width: 24px;
   height: 24px;
   background: rgba(255, 255, 255, 0.85);
   border-radius: 9999px;
   box-shadow: 0 8px 20px rgba(0, 0, 0, 0.35);
-  cursor: nesw-resize;
+  cursor: nwse-resize;
+}
+
+/* 视频面板内阴影羽化：作为 mask 不生效时的兜底方案 */
+.video-modal-panel.feather-active::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 2;
+  box-shadow: inset 0 0 120px 60px rgba(0, 0, 0, 0.6);
+  border-radius: 4px;
 }
 </style>
