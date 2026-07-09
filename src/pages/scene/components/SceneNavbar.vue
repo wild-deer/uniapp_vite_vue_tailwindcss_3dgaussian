@@ -2,7 +2,7 @@
   <!-- 相机镜头列表：绝对定位，始终显示 -->
   <view
     v-if="cameraOptions.length"
-    class="absolute top-4 right-4 z-[2147483647] w-48 bg-slate-950/85 border border-slate-700 rounded-sm overflow-hidden backdrop-blur-xl shadow-[0_10px_30px_rgba(0,0,0,0.65)]"
+    class="absolute top-[calc(1rem+130px)] right-4 z-[2147483647] w-48 bg-slate-950/85 border border-slate-700 rounded-sm overflow-hidden backdrop-blur-xl shadow-[0_10px_30px_rgba(0,0,0,0.65)]"
   >
     <view
       v-for="(option, index) in cameraOptions"
