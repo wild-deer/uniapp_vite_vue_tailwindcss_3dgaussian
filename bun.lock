@@ -22,6 +22,7 @@
         "@dcloudio/uni-mp-xhs": "3.0.0-4070520250711001",
         "@dcloudio/uni-quickapp-webview": "3.0.0-4070520250711001",
         "@mkkellogg/gaussian-splats-3d": "^0.4.7",
+        "hikvideoctrl": "^2.1.0",
         "pinia": "^3.0.4",
         "vue": "^3.4.21",
         "vue-i18n": "^9.1.9",
@@ -1172,6 +1173,8 @@
     "hash-sum": ["hash-sum@2.0.0", "https://registry.npmmirror.com/hash-sum/-/hash-sum-2.0.0.tgz", {}, "sha512-WdZTbAByD+pHfl/g9QSsBIIwy8IT+EsPiKDs0KNX+zSHhdDLFKdZu0BQHljvO+0QI/BasbMSUa8wYNCZTvhslg=="],
 
     "hasown": ["hasown@2.0.2", "https://registry.npmmirror.com/hasown/-/hasown-2.0.2.tgz", { "dependencies": { "function-bind": "^1.1.2" } }, "sha512-0hJU9SCPvmMzIBdZFqNPXWa6dqh7WdH0cII9y+CyS8rG3nL48Bclra9HmKhVVUHyPWNH5Y7xDwAB7bfgSjkUMQ=="],
+
+    "hikvideoctrl": ["hikvideoctrl@2.1.0", "https://registry.npmmirror.com/hikvideoctrl/-/hikvideoctrl-2.1.0.tgz", {}, "sha512-8mUwp2DAFEu3GPQtIFbd1pFSvszqw/7J0pOUAcHI4TMl7a/M/pNNVJQC5ScJu8fha934pr1yVL5gL1Qf5GPPlQ=="],
 
     "hookable": ["hookable@5.5.3", "https://registry.npmmirror.com/hookable/-/hookable-5.5.3.tgz", {}, "sha512-Yc+BQe8SvoXH1643Qez1zqLRmbA5rCL+sSmk6TVos0LWVfNIB7PGncdlId77WzLGSIB5KaWgTaNTs2lNVEI6VQ=="],
 

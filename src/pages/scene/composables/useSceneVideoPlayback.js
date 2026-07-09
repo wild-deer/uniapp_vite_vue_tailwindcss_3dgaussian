@@ -56,17 +56,29 @@ export function useSceneVideoPlayback(sceneStore, { moveCameraToView } = {}) {
       }, VIDEO_PLAYBACK_DELAY_MS)
     })
 
+  const hasVideoSource = (video) => {
+    if (!video || typeof video !== 'object') return false
+    const url = getVideoUrl(video)
+    if (url) return true
+    // 海康摄像头通过 channel 或 camera 属性标识
+    if (video.channel !== undefined && video.channel !== null) return true
+    if (video.camera && typeof video.camera === 'object') return true
+    return false
+  }
+
   const selectVideo = async (video) => {
     cancelPendingVideoPlayback()
     const currentSelectionToken = latestVideoSelectionToken.value
-    const url = getVideoUrl(video)
-    if (!url) {
+
+    if (!hasVideoSource(video)) {
       uni.showToast({
         title: '视频地址缺失',
         icon: 'none'
       })
       return
     }
+
+    const url = getVideoUrl(video)
 
     sceneStore.setInteractionLocked(true)
 

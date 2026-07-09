@@ -60,7 +60,12 @@ export const useSceneStore = defineStore('scene', () => {
 
   const startVideoPlayback = (video) => {
     activeVideo.value = video || null
-    playingVideo.value = !!(video && typeof video === 'object' && typeof video.url === 'string' && video.url.trim())
+    // 支持两种视频源：URL 模式（旧）和 channel 模式（海康摄像头）
+    playingVideo.value = !!(video && typeof video === 'object' && (
+      (typeof video.url === 'string' && video.url.trim()) ||
+      video.channel !== undefined && video.channel !== null ||
+      (video.camera && typeof video.camera === 'object')
+    ))
   }
 
   const stopVideoPlayback = () => {

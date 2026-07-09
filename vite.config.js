@@ -66,14 +66,29 @@ export default defineConfig({
       '/fileserver': {
         target: 'http://192.168.1.68:8443/download',
         changeOrigin: true,
-        secure: false, // 如果目标服务器使用自签名证书，设置为false
+        secure: false,
         rewrite: (path) => path.replace(/^\/fileserver/, '')
       },
       '/backend': {
         target: 'https://jeremy233-temp.oss-cn-guangzhou.aliyuncs.com',
         changeOrigin: true,
-        secure: false, // 如果目标服务器使用自签名证书，设置为false
+        secure: false,
         rewrite: (path) => path.replace(/^\/backend/, '')
+      },
+      // 海康威视 ISAPI 请求转发到摄像头
+      '/ISAPI': {
+        target: 'http://192.168.1.64:80',
+        changeOrigin: true
+      },
+      '/SDK': {
+        target: 'http://192.168.1.64:80',
+        changeOrigin: true
+      },
+      // 海康 WebSocket 视频流转发
+      '/webSocketVideoCtrlProxy': {
+        target: 'ws://192.168.1.64:80',
+        changeOrigin: true,
+        ws: true
       }
     }
   },
