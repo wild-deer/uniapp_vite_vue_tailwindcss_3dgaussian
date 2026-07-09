@@ -502,6 +502,10 @@ defineExpose({
 
 .realtime-stream {
   object-fit: contain;
+  /* 强制开启 GPU 硬件加速 */
+  transform: translateZ(0);
+  will-change: transform;
+  backface-visibility: hidden;
 }
 
 .video-modal-panel {
