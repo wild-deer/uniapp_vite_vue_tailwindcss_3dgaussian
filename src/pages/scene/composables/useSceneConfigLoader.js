@@ -58,10 +58,7 @@ export function useSceneConfigLoader(sceneStore) {
       return true
     }
 
-    const sceneConfigUrl = decodeRouteParam(routeOptions.value.sceneConfigUrl)
-    if (!sceneConfigUrl) {
-      return false
-    }
+    const sceneConfigUrl = decodeRouteParam(routeOptions.value.sceneConfigUrl) || '/fileserver/model/office/office.json'
 
     sceneStore.setLoading(true)
     sceneStore.setStatus('正在下载场景配置...')
