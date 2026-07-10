@@ -274,11 +274,29 @@ export function useSceneViewer(sceneStore) {
       }
     })
 
-  const resetCameraView = () => {
-    const gaussianViewer = viewer.value
-    if (!gaussianViewer) return false
-    return applyBillboardCameraView(gaussianViewer, sceneStore.sceneConfig.camera, sceneResources)
-  }
+  const resetCameraView = () =>
+    new Promise((resolve) => {
+      const gaussianViewer = viewer.value
+      if (!gaussianViewer) {
+        resolve(false)
+        return
+      }
+
+      let resolved = false
+      const done = (value) => {
+        if (resolved) return
+        resolved = true
+        resolve(!!value)
+      }
+
+      const ok = applyBillboardCameraView(gaussianViewer, sceneStore.sceneConfig.camera, sceneResources, {
+        onComplete: () => done(true)
+      })
+
+      if (!ok) {
+        done(false)
+      }
+    })
 
   // --- Public API (identical to before) ---
 

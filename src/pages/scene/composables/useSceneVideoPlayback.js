@@ -27,7 +27,7 @@ const getVideoCameraView = (video) => {
   }
 }
 
-export function useSceneVideoPlayback(sceneStore, { moveCameraToView } = {}) {
+export function useSceneVideoPlayback(sceneStore, { moveCameraToView, videoModalRef } = {}) {
   const pendingVideoPlaybackTimeoutId = ref(null)
   const latestVideoSelectionToken = ref(0)
 
@@ -98,6 +98,7 @@ export function useSceneVideoPlayback(sceneStore, { moveCameraToView } = {}) {
 
   const closeVideo = () => {
     cancelPendingVideoPlayback()
+    videoModalRef?.value?.cleanupStream?.()
     sceneStore.stopVideoPlayback()
     sceneStore.setInteractionLocked(false)
     sceneStore.setStatus('场景加载完成')

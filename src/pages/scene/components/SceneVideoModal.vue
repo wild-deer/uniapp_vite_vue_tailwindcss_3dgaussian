@@ -19,6 +19,7 @@
       >
         <view class="content-layer" :style="contentStyle">
           <img
+            ref="imgRef"
             v-if="isRealtimeImageStream"
             :src="activeVideoUrl"
             class="w-full h-full block bg-black shadow-xl realtime-stream"
@@ -190,6 +191,7 @@ const configuredContentScale = computed(() => getConfiguredContentScale(props.ac
 const configuredClipOffsets = computed(() => getConfiguredClipOffsets(props.activeVideo))
 const configuredFeatherEdge = computed(() => getConfiguredFeatherEdge(props.activeVideo))
 const configuredFeatherRadius = computed(() => getConfiguredFeatherRadius(props.activeVideo))
+const imgRef = ref(null)
 const playerWidth = ref(defaultPlayerWidth)
 const playerHeight = ref(defaultPlayerHeight)
 const resizing = ref(false)
@@ -443,7 +445,17 @@ const contentResizeHandleStyle = computed(() => ({
   top: `${offsetTop.value - 8}px`
 }))
 
+const cleanupStream = () => {
+  if (imgRef.value && isRealtimeImageStream.value) {
+    imgRef.value.src = ''
+  }
+  if (imgRef.value) {
+    imgRef.value.removeAttribute('src')
+  }
+}
+
 defineExpose({
+  cleanupStream,
   getPlayerSize: () => ({
     playerWidth: playerWidth.value,
     playerHeight: playerHeight.value,

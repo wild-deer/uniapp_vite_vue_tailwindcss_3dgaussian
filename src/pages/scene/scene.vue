@@ -28,6 +28,7 @@
       @copy-video-player-size="copyVideoPlayerSize"
       @reset-camera="resetCamera"
       @close-video="exitVideo"
+      @switch-camera="switchVideoDuringPlayback"
       @copy-camera="copyCameraView"
       @log-memory="logMemoryUsage"
       @toggle-axes-helper="sceneStore.toggleAxesHelper"
@@ -126,7 +127,7 @@ const {
   selectVideo,
   closeVideo,
   cancelPendingVideoPlayback
-} = useSceneVideoPlayback(sceneStore, { moveCameraToView })
+} = useSceneVideoPlayback(sceneStore, { moveCameraToView, videoModalRef })
 
 const {
   worldTextOptions,
@@ -227,5 +228,10 @@ const goBack = () => {
 
 const toggleDebugMode = () => {
   sceneStore.toggleDebugMode()
+}
+
+const switchVideoDuringPlayback = async (video) => {
+  await exitVideo()
+  selectVideo(video)
 }
 </script>
