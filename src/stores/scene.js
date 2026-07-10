@@ -58,6 +58,15 @@ export const useSceneStore = defineStore('scene', () => {
     showVideos.value = false
   }
 
+  const preloadVideoStream = (video) => {
+    activeVideo.value = video || null
+    playingVideo.value = false
+  }
+
+  const showVideoPlayer = () => {
+    playingVideo.value = !!(activeVideo.value && typeof activeVideo.value === 'object' && typeof activeVideo.value.url === 'string' && activeVideo.value.url.trim())
+  }
+
   const startVideoPlayback = (video) => {
     activeVideo.value = video || null
     playingVideo.value = !!(video && typeof video === 'object' && typeof video.url === 'string' && video.url.trim())
@@ -170,6 +179,8 @@ export const useSceneStore = defineStore('scene', () => {
     toggleControls,
     openVideos,
     closeVideos,
+    preloadVideoStream,
+    showVideoPlayer,
     startVideoPlayback,
     stopVideoPlayback,
     setInteractionLocked,

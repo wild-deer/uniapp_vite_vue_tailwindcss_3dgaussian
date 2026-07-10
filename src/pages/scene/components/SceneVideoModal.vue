@@ -6,56 +6,62 @@
     - 将 items-start 改为 items-center，实现垂直居中
     - justify-center 保持不变，实现水平居中
   -->
-  <transition name="transparent-fade" appear>
+  <!-- activeVideo 一旦设置就挂载 DOM 开始加载视频流，playingVideo 控制可见性 -->
+  <view
+    v-if="activeVideo"
+    class="fixed inset-0 z-50 flex items-center justify-center"
+    :class="{ 'pointer-events-none': !playingVideo }"
+  >
     <view
-      v-if="playingVideo && activeVideo"
-      class="fixed inset-0 z-50 flex items-center justify-center pointer-events-none"
+      class="relative video-modal-panel transition-opacity duration-1000"
+      :class="{
+        'opacity-0 pointer-events-none': !playingVideo,
+        'pointer-events-auto': playingVideo,
+        'feather-active': featherEnabled
+      }"
+      :style="videoContainerStyle"
     >
-      <!-- pointer-events-auto 恢复视频区域内部的点击事件 -->
-      <view
-        class="relative pointer-events-auto video-modal-panel"
-        :class="{ 'feather-active': featherEnabled }"
-        :style="videoContainerStyle"
-      >
-        <view class="content-layer" :style="contentStyle">
-          <img
-            ref="imgRef"
-            v-if="isRealtimeImageStream"
-            :src="activeVideoUrl"
-            class="w-full h-full block bg-black shadow-xl realtime-stream"
-            alt="实时视频流"
-          >
-          <video
-            v-else-if="activeVideoUrl"
-            :src="activeVideoUrl"
-            class="w-full h-full block bg-black shadow-xl"
-            controls
-            autoplay
-            playsinline
-          />
-        </view>
-        <button
-          @click="$emit('close-video')"
-          :style="closeBtnStyle"
-          class="absolute z-10 w-7 h-7 flex items-center justify-center bg-slate-900/50 border border-slate-500/30 text-slate-300 rounded-sm hover:bg-slate-500/20 hover:border-slate-400 transition-all duration-300"
+      <view class="content-layer" :style="contentStyle">
+        <img
+          ref="imgRef"
+          v-if="isRealtimeImageStream"
+          :src="activeVideoUrl"
+          class="w-full h-full block bg-black shadow-xl realtime-stream"
+          alt="实时视频流"
         >
-          <text class="text-sm font-mono leading-none">×</text>
-        </button>
-        <view
-          class="resize-handle"
-          :style="resizeHandleStyle"
-          @mousedown.stop="handleResizeMouseDown"
-          @touchstart.stop="handleResizeTouchStart"
-        />
-        <view
-          class="content-resize-handle"
-          :style="contentResizeHandleStyle"
-          @mousedown.stop="handleContentResizeMouseDown"
-          @touchstart.stop="handleContentResizeTouchStart"
+        <video
+          v-else-if="activeVideoUrl"
+          :src="activeVideoUrl"
+          class="w-full h-full block bg-black shadow-xl"
+          controls
+          autoplay
+          playsinline
         />
       </view>
+      <button
+        v-if="playingVideo"
+        @click="$emit('close-video')"
+        :style="closeBtnStyle"
+        class="absolute z-10 w-7 h-7 flex items-center justify-center bg-slate-900/50 border border-slate-500/30 text-slate-300 rounded-sm hover:bg-slate-500/20 hover:border-slate-400 transition-all duration-300"
+      >
+        <text class="text-sm font-mono leading-none">×</text>
+      </button>
+      <view
+        v-if="playingVideo"
+        class="resize-handle"
+        :style="resizeHandleStyle"
+        @mousedown.stop="handleResizeMouseDown"
+        @touchstart.stop="handleResizeTouchStart"
+      />
+      <view
+        v-if="playingVideo"
+        class="content-resize-handle"
+        :style="contentResizeHandleStyle"
+        @mousedown.stop="handleContentResizeMouseDown"
+        @touchstart.stop="handleContentResizeTouchStart"
+      />
     </view>
-  </transition>
+  </view>
   <!-- #endif -->
 </template>
 

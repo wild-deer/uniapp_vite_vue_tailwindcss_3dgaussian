@@ -68,6 +68,12 @@ export function useSceneVideoPlayback(sceneStore, { moveCameraToView, videoModal
       return
     }
 
+    // 立即预加载视频流：设置 activeVideo 挂载 DOM 开始请求流，但不显示播放器
+    sceneStore.preloadVideoStream({
+      ...(typeof video === 'object' ? video : null),
+      url
+    })
+
     sceneStore.setInteractionLocked(true)
 
     const cameraView = getVideoCameraView(video)
@@ -75,6 +81,7 @@ export function useSceneVideoPlayback(sceneStore, { moveCameraToView, videoModal
 
     const moved = await moveCameraToView?.(cameraView)
     if (!moved) {
+      sceneStore.stopVideoPlayback()
       sceneStore.setInteractionLocked(false)
       uni.showToast({
         title: '镜头切换失败',
@@ -89,10 +96,8 @@ export function useSceneVideoPlayback(sceneStore, { moveCameraToView, videoModal
       return
     }
 
-    sceneStore.startVideoPlayback({
-      ...(typeof video === 'object' ? video : null),
-      url
-    })
+    // 流已预加载完成，直接显示播放器
+    sceneStore.showVideoPlayer()
     sceneStore.setStatus('视频播放中')
   }
 
