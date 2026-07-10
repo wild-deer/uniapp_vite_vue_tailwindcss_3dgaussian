@@ -27,8 +27,9 @@ const parseSceneConfigResponse = (rawData) => {
 
 const requestSceneConfig = (sceneConfigUrl) =>
   new Promise((resolve, reject) => {
+      const urlWithCacheBust = sceneConfigUrl + (sceneConfigUrl.includes('?') ? '&' : '?') + '_t=' + Date.now()
     uni.request({
-      url: sceneConfigUrl,
+      url: urlWithCacheBust,
       method: 'GET',
       success: (response) => {
         if (response.statusCode < 200 || response.statusCode >= 300) {
