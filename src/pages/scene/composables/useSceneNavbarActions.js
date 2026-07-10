@@ -107,8 +107,8 @@ export function useSceneNavbarActions(sceneStore, deps) {
     copyToClipboard(data, '已复制标牌参数')
   }
 
-  const resetCamera = () => {
-    const hasReset = resetCameraView?.()
+  const resetCamera = async () => {
+    const hasReset = await resetCameraView?.()
     if (hasReset) {
       sceneStore.setStatus('镜头已重置')
       return
@@ -117,9 +117,9 @@ export function useSceneNavbarActions(sceneStore, deps) {
     showToast('当前平台不支持重置镜头')
   }
 
-  const exitVideo = () => {
+  const exitVideo = async () => {
     closeVideo?.()
-    resetCamera()
+    await resetCamera()
   }
 
   const copyCameraView = () => {

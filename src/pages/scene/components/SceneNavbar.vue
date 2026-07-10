@@ -316,6 +316,8 @@ const emit = defineEmits([
   'back',
   'toggle-controls',
   'select-video',
+  'close-video',
+  'switch-camera',
   'toggle-debug',
   'select-world-text',
   'update-world-text-angle',
@@ -456,7 +458,12 @@ const selectCamera = (index) => {
   if (!Number.isFinite(safeIndex) || safeIndex < 0) return
   const video = props.videos?.[safeIndex]
   if (!video) return
-  emit('select-video', video)
+
+  if (props.playingVideo) {
+    emit('switch-camera', video)
+  } else {
+    emit('select-video', video)
+  }
 }
 
 const notifyNoCameras = () => {
