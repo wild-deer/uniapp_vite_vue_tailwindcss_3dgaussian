@@ -1,5 +1,5 @@
 <template>
-  <view class="flex items-center justify-center relative z-[2147483640] p-4 bg-slate-950/70 border-b border-cyan-500/20 backdrop-blur-xl h-12 shadow-[0_4px_30px_rgba(0,0,0,0.8)]">
+  <view class="flex items-center justify-center absolute top-0 left-0 right-0 z-[2147483640] p-4 bg-slate-950/70 border-b border-cyan-500/20 backdrop-blur-xl h-12 shadow-[0_4px_30px_rgba(0,0,0,0.8)]">
     
     <!-- 左侧：返回按钮（极简科技线框） -->
     <view
