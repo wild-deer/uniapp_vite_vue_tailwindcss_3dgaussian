@@ -126,7 +126,7 @@ const {
   selectVideo,
   closeVideo,
   cancelPendingVideoPlayback
-} = useSceneVideoPlayback(sceneStore, { moveCameraToView })
+} = useSceneVideoPlayback(sceneStore, { moveCameraToView, videoModalRef })
 
 const {
   worldTextOptions,
