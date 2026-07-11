@@ -3,8 +3,10 @@ import * as GaussianSplats3D from '@mkkellogg/gaussian-splats-3d'
 import * as THREE from 'three'
 import {
   applyBillboardCameraView,
+  createBillboard,
   loadBillboards,
-  setupBillboardInteractions
+  setupBillboardInteractions,
+  updateBillboardBlink
 } from './scene-viewer/billboards'
 import { loadWorldTexts } from './scene-viewer/worldTexts'
 import { load3DModels } from './scene-viewer/models'
@@ -31,10 +33,14 @@ export function useSceneViewer(sceneStore) {
     container: null,
     animationFrame: null,
     keyboardAnimationFrame: null,
+    blinkAnimationFrame: null,
     stopKeyboardMovement: null,
     eventListeners: [],
     loadedScenes: []
   })
+
+  // 视频 billboard 点击回调，由 scene.vue 注入 selectVideo
+  const videoBillboardClickCallback = ref(null)
 
   // --- Lifecycle / Cleanup ---
 
@@ -168,6 +174,43 @@ export function useSceneViewer(sceneStore) {
       }
 
       await loadBillboards(threeScene, sceneStore.sceneConfig.billboards)
+
+      // 从 videos 中创建 billboard：视频标记了 "billboard": true 的条目，在场景中生成可点击的广告牌
+      const videos = Array.isArray(sceneStore.sceneConfig.videos) ? sceneStore.sceneConfig.videos : []
+      for (const video of videos) {
+        if (!video?.billboard) continue
+        const cameraPos = video?.camera?.position || video?.position
+        if (!cameraPos || !Array.isArray(cameraPos) || cameraPos.length < 3) continue
+        // billboard 为对象时可自定义参数（pngUrl, svgUrl, scale, fontSize 等），position 可覆盖 camera 位置
+        const billboardOverrides = typeof video.billboard === 'object' && video.billboard !== null ? video.billboard : {}
+        try {
+          const videoBillboard = await createBillboard({
+            text: video.title || video.name || '镜头',
+            position: billboardOverrides.position || cameraPos,
+            scale: [4, 1.5, 1],
+            fontSize: 64,
+            textColor: '#ffffff',
+            strokeColor: '#00a2ff',
+            backgroundColor: 'rgba(0, 52, 105, 0)',
+            // 透传 billboard 对象中的自定义参数
+            ...billboardOverrides,
+            // 但 cameraView 始终从 video 配置提取，防止被覆盖
+            cameraView: {
+              position: video?.camera?.position || video?.position,
+              lookAt: video?.camera?.lookAt || video?.lookAt,
+              ...(video?.camera?.up || video?.up ? { up: video?.camera?.up || video?.up } : {}),
+              ...(Number.isFinite(video?.camera?.duration) ? { duration: video.camera.duration } : Number.isFinite(video?.duration) ? { duration: video.duration } : {})
+            }
+          })
+          videoBillboard.userData.isVideoBillboard = true
+          videoBillboard.userData.videoData = video
+          threeScene.add(videoBillboard)
+          console.log('📋 添加视频关联广告牌:', video.title || video.name || '未命名')
+        } catch (err) {
+          console.warn('⚠️ 创建视频关联广告牌失败:', err)
+        }
+      }
+
       await loadWorldTexts(threeScene, sceneStore.sceneConfig.worldTexts)
       worldTextDebug.syncWorldTextDebugOptions()
       await load3DModels(threeScene, sceneStore)
@@ -196,8 +239,20 @@ export function useSceneViewer(sceneStore) {
         threeScene,
         addTrackedEventListener,
         sceneStore,
-        sceneResources
+        sceneResources,
+        onVideoBillboardClick: (video) => {
+          if (typeof videoBillboardClickCallback.value === 'function') {
+            videoBillboardClickCallback.value(video)
+          }
+        }
       })
+
+      // Start billboard blink animation loop
+      const blinkLoop = () => {
+        updateBillboardBlink(threeScene)
+        sceneResources.value.blinkAnimationFrame = requestAnimationFrame(blinkLoop)
+      }
+      sceneResources.value.blinkAnimationFrame = requestAnimationFrame(blinkLoop)
 
       sceneStore.setLoading(false)
       sceneStore.setStatus('场景加载完成')
@@ -327,6 +382,9 @@ export function useSceneViewer(sceneStore) {
     setSelectedWorldTextTiltAngle: worldTextDebug.setSelectedWorldTextTiltAngle,
     setSelectedWorldTextRollAngle: worldTextDebug.setSelectedWorldTextRollAngle,
     setSelectedWorldTextPosition: worldTextDebug.setSelectedWorldTextPosition,
-    setSelectedWorldTextScale: worldTextDebug.setSelectedWorldTextScale
+    setSelectedWorldTextScale: worldTextDebug.setSelectedWorldTextScale,
+    setVideoBillboardClickCallback: (fn) => {
+      videoBillboardClickCallback.value = typeof fn === 'function' ? fn : null
+    }
   }
 }

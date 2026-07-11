@@ -9,9 +9,13 @@
   <!-- activeVideo 一旦设置就挂载 DOM 开始加载视频流，playingVideo 控制可见性 -->
   <view
     v-if="activeVideo"
-    class="fixed inset-0 z-50 flex items-center justify-center"
-    :class="{ 'pointer-events-none': !playingVideo }"
+    class="fixed inset-0 z-50 flex items-center justify-center pointer-events-none"
   >
+    <!-- 全屏事件遮罩：非 debug 模式下阻挡场景交互 -->
+    <view
+      v-if="playingVideo && !debugMode"
+      class="absolute inset-0 pointer-events-auto"
+    />
     <view
       class="relative video-modal-panel transition-opacity duration-1000"
       :class="{
@@ -78,6 +82,10 @@ const props = defineProps({
   activeVideo: {
     type: Object,
     default: null
+  },
+  debugMode: {
+    type: Boolean,
+    default: false
   }
 })
 
@@ -233,8 +241,8 @@ const getViewportSize = () => {
 
 const clampPlayerSize = ({ width, height }) => {
   const viewport = getViewportSize()
-  const maxWidth = viewport.width ? Math.max(minPlayerWidth, Math.round(viewport.width - 32)) : 99999
-  const maxHeight = viewport.height ? Math.max(minPlayerHeight, Math.round(viewport.height - 32)) : 99999
+  const maxWidth = viewport.width ? Math.max(minPlayerWidth, Math.round(viewport.width)) : 99999
+  const maxHeight = viewport.height ? Math.max(minPlayerHeight, Math.round(viewport.height)) : 99999
   return {
     width: Math.min(Math.max(Math.round(width), minPlayerWidth), maxWidth),
     height: Math.min(Math.max(Math.round(height), minPlayerHeight), maxHeight)
@@ -397,8 +405,8 @@ const videoContainerStyle = computed(() => {
   const style = {
     width: `${playerWidth.value}px`,
     height: `${playerHeight.value}px`,
-    maxWidth: 'calc(100vw - 2rem)',
-    maxHeight: 'calc(100vh - 2rem)',
+    maxWidth: '100vw',
+    maxHeight: '100vh',
     userSelect: resizing.value ? 'none' : '',
     overflow: 'hidden'
   }

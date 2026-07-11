@@ -61,7 +61,8 @@ export const checkCleanupStatus = (sceneResources) => {
     eventListeners: resources.eventListeners.length === 0,
     loadedScenes: resources.loadedScenes.length === 0,
     animationFrame: resources.animationFrame === null,
-    keyboardAnimationFrame: resources.keyboardAnimationFrame === null
+    keyboardAnimationFrame: resources.keyboardAnimationFrame === null,
+    blinkAnimationFrame: resources.blinkAnimationFrame === null
   }
 
   const allClean = Object.values(status).every((clean) => clean)
@@ -73,6 +74,7 @@ export const checkCleanupStatus = (sceneResources) => {
   console.log('   场景已清理:', status.loadedScenes ? '✅' : '❌')
   console.log('   动画帧已清理:', status.animationFrame ? '✅' : '❌')
   console.log('   键盘移动帧已清理:', status.keyboardAnimationFrame ? '✅' : '❌')
+  console.log('   闪烁动画帧已清理:', status.blinkAnimationFrame ? '✅' : '❌')
   console.log('   整体状态:', allClean ? '🎉 完全清理' : '⚠️ 存在未清理资源')
 
   return allClean
@@ -107,6 +109,12 @@ export const performCompleteCleanup = ({
       cancelAnimationFrame(sceneResources.value.keyboardAnimationFrame)
       sceneResources.value.keyboardAnimationFrame = null
       console.log('✓ 键盘移动帧已清除')
+    }
+
+    if (sceneResources.value.blinkAnimationFrame) {
+      cancelAnimationFrame(sceneResources.value.blinkAnimationFrame)
+      sceneResources.value.blinkAnimationFrame = null
+      console.log('✓ 闪烁动画帧已清除')
     }
 
     try {

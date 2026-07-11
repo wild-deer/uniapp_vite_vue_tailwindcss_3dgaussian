@@ -70,6 +70,7 @@
       ref="videoModalRef"
       :playing-video="sceneStore.playingVideo"
       :active-video="sceneStore.activeVideo"
+      :debug-mode="sceneStore.debugMode"
       @close-video="exitVideo"
     />
   </view>
@@ -114,9 +115,10 @@ let setSelectedWorldTextTiltAngle
 let setSelectedWorldTextRollAngle
 let setSelectedWorldTextPosition
 let setSelectedWorldTextScale
+let setVideoBillboardClickCallback
 
 // #ifdef H5
-;({ viewer, initViewer, performCompleteCleanup, logMemoryUsage, resetCameraView, moveCameraToView, setViewerInteractionLocked, setWorldTextDebugEnabled, copySelectedWorldText, worldTextDebugOptions, selectedWorldTextIndex, selectedWorldTextAngle, selectedWorldTextTiltAngle, selectedWorldTextRollAngle, selectedWorldTextPosition, selectedWorldTextScale, selectWorldTextByIndex, setSelectedWorldTextAngle, setSelectedWorldTextTiltAngle, setSelectedWorldTextRollAngle, setSelectedWorldTextPosition, setSelectedWorldTextScale } =
+;({ viewer, initViewer, performCompleteCleanup, logMemoryUsage, resetCameraView, moveCameraToView, setViewerInteractionLocked, setWorldTextDebugEnabled, copySelectedWorldText, worldTextDebugOptions, selectedWorldTextIndex, selectedWorldTextAngle, selectedWorldTextTiltAngle, selectedWorldTextRollAngle, selectedWorldTextPosition, selectedWorldTextScale, selectWorldTextByIndex, setSelectedWorldTextAngle, setSelectedWorldTextTiltAngle, setSelectedWorldTextRollAngle, setSelectedWorldTextPosition, setSelectedWorldTextScale, setVideoBillboardClickCallback } =
   useSceneViewer(sceneStore))
 // #endif
 
@@ -185,6 +187,8 @@ onMounted(async () => {
   sceneStore.setIsDevelopment(process.env.NODE_ENV === 'development')
   console.log('🚀 初始化 3D 场景，记录初始内存状态:')
   logMemoryUsage?.()
+  // 注册视频 billboard 点击回调：场景中点击视频关联广告牌时触发视频播放
+  setVideoBillboardClickCallback?.(selectVideo)
   initViewer?.()
   // #endif
 
@@ -228,6 +232,9 @@ const goBack = () => {
 
 const toggleDebugMode = () => {
   sceneStore.toggleDebugMode()
+  if (sceneStore.debugMode) {
+    sceneStore.setInteractionLocked(false)
+  }
 }
 
 const switchVideoDuringPlayback = async (video) => {

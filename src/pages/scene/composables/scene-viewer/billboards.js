@@ -3,6 +3,69 @@ import * as THREE from 'three'
 const isValidVector3 = (value) =>
   Array.isArray(value) && value.length === 3 && value.every((item) => Number.isFinite(item))
 
+// --- Image / SVG support utilities ---
+
+const renderImageToCanvas = (imageUrl, width, height) => {
+  return new Promise((resolve, reject) => {
+    const img = new Image()
+    img.crossOrigin = 'anonymous'
+
+    img.onload = () => {
+      const canvas = document.createElement('canvas')
+      canvas.width = width
+      canvas.height = height
+      const ctx = canvas.getContext('2d')
+      ctx.drawImage(img, 0, 0, width, height)
+      resolve(canvas)
+    }
+
+    img.onerror = () => {
+      reject(new Error('Failed to load image'))
+    }
+
+    img.src = imageUrl
+  })
+}
+
+const renderSVGToCanvas = (svgString, width, height) => {
+  return new Promise((resolve, reject) => {
+    // Override SVG width/height to rasterize at target resolution, preventing aliasing
+    const sizedSVG = svgString
+      .replace(/\bwidth\s*=\s*["'][^"']*["']/gi, '')
+      .replace(/\bheight\s*=\s*["'][^"']*["']/gi, '')
+      .replace(/<svg/i, `<svg width="${width}" height="${height}"`)
+
+    const blob = new Blob([sizedSVG], { type: 'image/svg+xml' })
+    const url = URL.createObjectURL(blob)
+    const img = new Image()
+
+    img.onload = () => {
+      URL.revokeObjectURL(url)
+      const canvas = document.createElement('canvas')
+      canvas.width = width
+      canvas.height = height
+      const ctx = canvas.getContext('2d')
+      ctx.drawImage(img, 0, 0, width, height)
+      resolve(canvas)
+    }
+
+    img.onerror = () => {
+      URL.revokeObjectURL(url)
+      reject(new Error('Failed to render SVG'))
+    }
+
+    img.src = url
+  })
+}
+
+const fetchSVGText = async (url) => {
+  const response = await fetch(url)
+  if (!response.ok) {
+    throw new Error(`Failed to fetch SVG: ${response.status}`)
+  }
+  return response.text()
+}
+
 const normalizeCameraView = (cameraView) => {
   if (!cameraView || !isValidVector3(cameraView.position) || !isValidVector3(cameraView.lookAt)) {
     return null
@@ -105,9 +168,46 @@ const createTextCanvas = ({
   return canvas
 }
 
-export const createBillboard = (config = {}) => {
+const createLayerSprite = async (layerConfig = {}, canvasWidth = 2048, canvasHeight = 2048, scaleArr = [8, 2, 1]) => {
+  const {
+    pngUrl,
+    blink = false,
+    blinkInterval = 500,
+    blinkColor = [0.2, 0.2, 0.2]
+  } = layerConfig
+
+  if (!pngUrl) {
+    throw new Error('Layer requires pngUrl')
+  }
+
+  const imageCanvas = await renderImageToCanvas(pngUrl, canvasWidth, canvasHeight)
+  const texture = createCanvasTexture(imageCanvas)
+
+  const material = new THREE.SpriteMaterial({
+    map: texture,
+    transparent: true,
+    alphaTest: 0.1
+  })
+
+  const sprite = new THREE.Sprite(material)
+  sprite.scale.set(...scaleArr)
+
+  sprite.userData = {
+    isLayer: true,
+    blink,
+    blinkInterval,
+    blinkColor
+  }
+
+  return sprite
+}
+
+export const createBillboard = async (config = {}) => {
   const {
     text = '',
+    pngUrl = null,
+    svg = null,
+    svgUrl = null,
     position = [0, 5, 0],
     scale = [8, 2, 1],
     boardWidth = null,
@@ -119,31 +219,99 @@ export const createBillboard = (config = {}) => {
     strokeColor = '#000000',
     strokeWidth = 4,
     backgroundColor = 'rgba(0, 0, 0, 0)',
-    canvasWidth = 512,
-    canvasHeight = 128,
+    canvasWidth = 2048,
+    canvasHeight = 2048,
     padding = 32,
-    cameraView = null
+    cameraView = null,
+    layers = null
   } = config
 
-  const backgroundTexture = createCanvasTexture(
+  // --- Multi-layer mode: stack multiple PNG layers ---
+  if (layers && Array.isArray(layers) && layers.length > 0) {
+    const resolvedBoardWidth = Number.isFinite(boardWidth) ? boardWidth : scale[0]
+    const resolvedBoardHeight = Number.isFinite(boardHeight) ? boardHeight : scale[1]
+    const resolvedScaleZ = scale[2] ?? 1
+
+    const baseMaterial = new THREE.SpriteMaterial({
+      transparent: true,
+      opacity: 0,
+      depthWrite: false
+    })
+    const billboard = new THREE.Sprite(baseMaterial)
+    billboard.position.set(...position)
+    billboard.scale.set(resolvedBoardWidth, resolvedBoardHeight, resolvedScaleZ)
+
+    for (let i = 0; i < layers.length; i++) {
+      const layerConfig = layers[i]
+      try {
+        const layerSprite = await createLayerSprite(
+          layerConfig,
+          canvasWidth,
+          canvasHeight,
+          [resolvedBoardWidth, resolvedBoardHeight, resolvedScaleZ]
+        )
+        layerSprite.position.set(0, 0, (i + 1) * 0.001)
+        billboard.add(layerSprite)
+        console.log(`📋 已加载图层 ${i + 1}:`, layerConfig.pngUrl)
+      } catch (err) {
+        console.warn(`⚠️ 无法加载图层 ${i + 1}:`, layerConfig.pngUrl, err)
+      }
+    }
+
+    billboard.userData = {
+      ...billboard.userData,
+      isBillboard: true,
+      isMultiLayer: true,
+      billboardText: text || '(多层广告牌)',
+      cameraView: normalizeCameraView(cameraView)
+    }
+
+    return billboard
+  }
+
+  // --- Original single-layer logic ---
+  let mainTexture = null
+
+  // Try PNG first (raster image from URL)
+  if (pngUrl) {
+    try {
+      const imageCanvas = await renderImageToCanvas(pngUrl, canvasWidth, canvasHeight)
+      mainTexture = createCanvasTexture(imageCanvas)
+      console.log('📋 已加载 PNG:', pngUrl)
+    } catch (err) {
+      console.warn('⚠️ 无法加载PNG，回退到文字模式:', pngUrl, err)
+    }
+  }
+
+  // Try SVG (either inline svg string or svgUrl)
+  if (!mainTexture && (svg || svgUrl)) {
+    let svgString = svg
+
+    if (svgUrl && !svg) {
+      try {
+        svgString = await fetchSVGText(svgUrl)
+        console.log('📋 已加载 SVG:', svgUrl)
+      } catch (err) {
+        console.warn('⚠️ 无法从URL加载SVG，回退到文字模式:', svgUrl, err)
+      }
+    }
+
+    if (svgString) {
+      try {
+        const svgCanvas = await renderSVGToCanvas(svgString, canvasWidth, canvasHeight)
+        mainTexture = createCanvasTexture(svgCanvas)
+      } catch (err) {
+        console.warn('⚠️ 无法渲染SVG，回退到文字模式:', err)
+      }
+    }
+  }
+
+  // Fallback: background canvas for text mode, or if SVG failed
+  const backgroundTexture = mainTexture || createCanvasTexture(
     createBackgroundCanvas({
       width: canvasWidth,
       height: canvasHeight,
       backgroundColor
-    })
-  )
-  const textTexture = createCanvasTexture(
-    createTextCanvas({
-      text,
-      fontSize,
-      fontsize,
-      fontFamily,
-      textColor,
-      strokeColor,
-      strokeWidth,
-      canvasWidth,
-      canvasHeight,
-      padding
     })
   )
 
@@ -160,20 +328,37 @@ export const createBillboard = (config = {}) => {
   const resolvedBoardHeight = Number.isFinite(boardHeight) ? boardHeight : scale[1]
   billboard.scale.set(resolvedBoardWidth, resolvedBoardHeight, scale[2] ?? 1)
 
-  const textMaterial = new THREE.SpriteMaterial({
-    map: textTexture,
-    transparent: true,
-    alphaTest: 0.05
-  })
-  const textSprite = new THREE.Sprite(textMaterial)
-  textSprite.scale.set(scale[0], scale[1], scale[2] ?? 1)
-  textSprite.position.set(0, 0, 0.001)
-  billboard.add(textSprite)
+  // Only add text overlay when NOT using SVG
+  if (!mainTexture) {
+    const textTexture = createCanvasTexture(
+      createTextCanvas({
+        text,
+        fontSize,
+        fontsize,
+        fontFamily,
+        textColor,
+        strokeColor,
+        strokeWidth,
+        canvasWidth,
+        canvasHeight,
+        padding
+      })
+    )
+    const textMaterial = new THREE.SpriteMaterial({
+      map: textTexture,
+      transparent: true,
+      alphaTest: 0.05
+    })
+    const textSprite = new THREE.Sprite(textMaterial)
+    textSprite.scale.set(scale[0], scale[1], scale[2] ?? 1)
+    textSprite.position.set(0, 0, 0.001)
+    billboard.add(textSprite)
+  }
 
   billboard.userData = {
     ...billboard.userData,
     isBillboard: true,
-    billboardText: text,
+    billboardText: text || '(SVG)',
     cameraView: normalizeCameraView(cameraView)
   }
 
@@ -182,14 +367,40 @@ export const createBillboard = (config = {}) => {
 
 export const loadBillboards = async (threeScene, billboards = []) => {
   if (billboards.length === 0) {
-    threeScene.add(createBillboard())
+    const billboard = await createBillboard()
+    threeScene.add(billboard)
     return
   }
 
   for (const billboardConfig of billboards) {
-    const billboard = createBillboard(billboardConfig)
+    const billboard = await createBillboard(billboardConfig)
     threeScene.add(billboard)
-    console.log('📋 添加广告牌:', billboardConfig.text || '默认文字')
+    console.log('📋 添加广告牌:', billboardConfig.text || billboardConfig.pngUrl || billboardConfig.svgUrl || '默认文字')
+  }
+}
+
+export const updateBillboardBlink = (threeScene) => {
+  if (!threeScene) return
+
+  const now = performance.now()
+  const billboards = threeScene.children.filter((c) => c.userData?.isBillboard)
+
+  for (const billboard of billboards) {
+    for (const child of billboard.children) {
+      if (!child.userData?.isLayer || !child.userData?.blink) continue
+
+      const { blinkInterval, blinkColor } = child.userData
+      const phaseInCycle = now % blinkInterval
+      // Sine-based smooth blink: t oscillates between 0 (blinkColor) and 1 (white)
+      const t = Math.sin((phaseInCycle / blinkInterval) * Math.PI * 2) * 0.5 + 0.5
+
+      const [br, bg, bb] = blinkColor
+      child.material.color.setRGB(
+        THREE.MathUtils.lerp(br, 1, t),
+        THREE.MathUtils.lerp(bg, 1, t),
+        THREE.MathUtils.lerp(bb, 1, t)
+      )
+    }
   }
 }
 
@@ -275,17 +486,31 @@ export const setupBillboardInteractions = ({
   threeScene,
   addTrackedEventListener,
   sceneStore,
-  sceneResources
+  sceneResources,
+  onVideoBillboardClick
 }) => {
   const domElement = gaussianViewer?.renderer?.domElement
   if (!domElement || typeof addTrackedEventListener !== 'function') {
     return
   }
 
-  const getInteractiveBillboards = () =>
-    threeScene.children.filter(
-      (child) => child.userData?.isBillboard && child.userData?.cameraView
-    )
+  const getInteractiveBillboards = () => {
+    const result = []
+    for (const child of threeScene.children) {
+      if (child.userData?.isBillboard && child.userData?.cameraView) {
+        result.push(child)
+        // For multi-layer billboards, also include layer children for hit testing
+        if (child.userData?.isMultiLayer) {
+          for (const layerChild of child.children) {
+            if (layerChild.userData?.isLayer) {
+              result.push(layerChild)
+            }
+          }
+        }
+      }
+    }
+    return result
+  }
 
   if (getInteractiveBillboards().length === 0) {
     return
@@ -312,7 +537,15 @@ export const setupBillboardInteractions = ({
     raycaster.setFromCamera(pointer, gaussianViewer.camera)
 
     const intersections = raycaster.intersectObjects(getInteractiveBillboards(), false)
-    return intersections[0]?.object || null
+    const hit = intersections[0]?.object || null
+    if (!hit) return null
+
+    // If we hit a layer child, traverse up to its billboard parent
+    if (hit.userData?.isLayer && hit.parent?.userData?.isBillboard) {
+      return hit.parent
+    }
+
+    return hit
   }
 
   const handlePointerDown = (event) => {
@@ -338,6 +571,19 @@ export const setupBillboardInteractions = ({
     }
 
     const billboard = getIntersectedBillboard(event)
+    if (!billboard) {
+      return
+    }
+
+    // 视频关联的 billboard：触发视频播放流程（镜头移动 + 播放视频）
+    if (billboard.userData?.isVideoBillboard && typeof onVideoBillboardClick === 'function') {
+      const videoData = billboard.userData.videoData
+      if (videoData) {
+        onVideoBillboardClick(videoData)
+        return
+      }
+    }
+
     const cameraView = billboard?.userData?.cameraView
     if (!cameraView) {
       return
