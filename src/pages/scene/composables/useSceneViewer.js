@@ -240,9 +240,9 @@ export function useSceneViewer(sceneStore) {
         addTrackedEventListener,
         sceneStore,
         sceneResources,
-        onVideoBillboardClick: (video) => {
+        onVideoBillboardClick: (video, billboard) => {
           if (typeof videoBillboardClickCallback.value === 'function') {
-            videoBillboardClickCallback.value(video)
+            videoBillboardClickCallback.value(video, billboard)
           }
         }
       })

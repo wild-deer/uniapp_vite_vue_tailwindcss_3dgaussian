@@ -30,6 +30,7 @@ const getVideoCameraView = (video) => {
 export function useSceneVideoPlayback(sceneStore, { moveCameraToView, videoModalRef } = {}) {
   const pendingVideoPlaybackTimeoutId = ref(null)
   const latestVideoSelectionToken = ref(0)
+  const activeVideoBillboard = ref(null)
 
   const availableVideos = computed(() =>
     Array.isArray(sceneStore.sceneConfig?.videos) ? sceneStore.sceneConfig.videos : []
@@ -56,7 +57,7 @@ export function useSceneVideoPlayback(sceneStore, { moveCameraToView, videoModal
       }, VIDEO_PLAYBACK_DELAY_MS)
     })
 
-  const selectVideo = async (video) => {
+  const selectVideo = async (video, billboard) => {
     cancelPendingVideoPlayback()
     const currentSelectionToken = latestVideoSelectionToken.value
     const url = getVideoUrl(video)
@@ -66,6 +67,11 @@ export function useSceneVideoPlayback(sceneStore, { moveCameraToView, videoModal
         icon: 'none'
       })
       return
+    }
+
+    // 记录当前视频关联的 billboard，关闭视频时恢复显示
+    if (billboard) {
+      activeVideoBillboard.value = billboard
     }
 
     // 立即预加载视频流：设置 activeVideo 挂载 DOM 开始请求流，但不显示播放器
@@ -107,6 +113,12 @@ export function useSceneVideoPlayback(sceneStore, { moveCameraToView, videoModal
     sceneStore.stopVideoPlayback()
     sceneStore.setInteractionLocked(false)
     sceneStore.setStatus('场景加载完成')
+
+    // 恢复视频关联的 billboard 显示
+    if (activeVideoBillboard.value) {
+      activeVideoBillboard.value.visible = true
+      activeVideoBillboard.value = null
+    }
   }
 
   onBeforeUnmount(() => {

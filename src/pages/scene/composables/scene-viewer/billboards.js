@@ -579,7 +579,8 @@ export const setupBillboardInteractions = ({
     if (billboard.userData?.isVideoBillboard && typeof onVideoBillboardClick === 'function') {
       const videoData = billboard.userData.videoData
       if (videoData) {
-        onVideoBillboardClick(videoData)
+        billboard.visible = false
+        onVideoBillboardClick(videoData, billboard)
         return
       }
     }
@@ -589,8 +590,16 @@ export const setupBillboardInteractions = ({
       return
     }
 
-    const hasApplied = applyBillboardCameraView(gaussianViewer, cameraView, sceneResources)
+    // 点击后隐藏 billboard，动画结束后恢复显示
+    billboard.visible = false
+
+    const hasApplied = applyBillboardCameraView(gaussianViewer, cameraView, sceneResources, {
+      onComplete: () => {
+        billboard.visible = true
+      }
+    })
     if (!hasApplied) {
+      billboard.visible = true
       return
     }
 
