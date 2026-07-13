@@ -59,7 +59,7 @@ export function useSceneConfigLoader(sceneStore) {
       return true
     }
 
-    const sceneConfigUrl = decodeRouteParam(routeOptions.value.sceneConfigUrl)
+    const sceneConfigUrl = decodeRouteParam(routeOptions.value.sceneConfigUrl || '/fileserver/model/office/office.json')
     if (!sceneConfigUrl) {
       return false
     }

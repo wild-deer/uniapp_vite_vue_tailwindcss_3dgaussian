@@ -1,7 +1,9 @@
 <template>
   <view class="flex flex-col h-screen bg-black relative">
     <SceneNavbar
+      v-if="sceneStore.showNavbar"
       :is-development="sceneStore.isDevelopment"
+      :navbar-position="sceneStore.navbarPosition"
       :debug-mode="sceneStore.debugMode"
       :playing-video="sceneStore.playingVideo"
       :videos="availableVideos"
@@ -185,6 +187,17 @@ onMounted(async () => {
   // 在H5环境下初始化viewer
   // #ifdef H5
   sceneStore.setIsDevelopment(process.env.NODE_ENV === 'development')
+  // 暴露导航栏控制到 F12 控制台
+  window.__navbarAPI = {
+    toggle: () => sceneStore.toggleNavbar(),
+    show: () => sceneStore.setShowNavbar(true),
+    hide: () => sceneStore.setShowNavbar(false),
+    get visible() { return sceneStore.showNavbar },
+    get position() { return sceneStore.navbarPosition },
+    setPosition: (pos) => sceneStore.setNavbarPosition(pos)
+  }
+  console.log('🔧 导航栏控制已就绪，可通过 __navbarAPI.toggle() / .show() / .hide() 控制')
+  console.log('   __navbarAPI.setPosition("top"|"bottom"|"top-50"|"bottom-20") 控制位置, __navbarAPI.position 查看当前位置')
   console.log('🚀 初始化 3D 场景，记录初始内存状态:')
   logMemoryUsage?.()
   // 注册视频 billboard 点击回调：场景中点击视频关联广告牌时触发视频播放

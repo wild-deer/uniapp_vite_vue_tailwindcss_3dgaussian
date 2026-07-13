@@ -152,7 +152,10 @@ performQuickCleanup()
 支持灵活的场景配置，包括多个组件组合：
 
 ```javascript
-const sceneConfig = {
+const sceneConfig = 
+{
+  showNavbar: true,         // 控制导航栏显隐，默认 true
+  navbarPosition: 'top',    // 控制导航栏位置，支持 'top' / 'bottom' 或带偏移 'top-N' / 'bottom-N'（N为px），默认 'top'
   billboards: [
     {
       text: '场景标题',
@@ -184,6 +187,19 @@ const sceneConfig = {
     lookAt: [0, 4, 0]
   }
 }
+```
+
+### 导航栏控制
+
+除了通过配置文件的 `showNavbar` 和 `navbarPosition` 字段控制外，还可以在浏览器 F12 开发者控制台动态控制导航栏：
+
+```javascript
+window.__navbarAPI.toggle()          // 切换显示/隐藏
+window.__navbarAPI.show()            // 显示导航栏
+window.__navbarAPI.hide()            // 隐藏导航栏
+window.__navbarAPI.visible           // 查看当前可见状态
+window.__navbarAPI.position          // 查看当前位置（如 'top', 'bottom', 'top-50' 等）
+window.__navbarAPI.setPosition("top"|"bottom"|"top-N"|"bottom-N")  // 切换导航栏位置，N 为 px 偏移量
 ```
 
 ### 代理配置
@@ -233,18 +249,4 @@ camera: {
   lookAt: [x, y, z]        // 观察点
 }
 ```
-
-## 🐛 常见问题
-
-### Q: 3D模型加载失败？
-A: 检查文件路径是否正确，确保文件格式支持（GLTF/GLB、OBJ、FBX）
-
-### Q: 高斯泼溅渲染缓慢？
-A: 大文件建议启用渐进式加载，或使用压缩后的模型文件
-
-### Q: 内存占用过高？
-A: 项目已集成自动内存清理，页面切换时会自动释放资源
-
-### Q: 小程序平台不支持？
-A: 高斯泼溅渲染仅支持H5平台，小程序平台会显示提示信息
 

@@ -1,12 +1,16 @@
 <template>
-  <view class="flex items-center justify-center absolute top-0 left-0 right-0 z-[2147483640] p-4 bg-slate-950/70 border-b border-cyan-500/20 backdrop-blur-xl h-12 shadow-[0_4px_30px_rgba(0,0,0,0.8)]">
+  <view
+    class="flex items-center justify-center absolute left-0 right-0 z-[2147483640] p-4 bg-slate-950/70 backdrop-blur-xl h-12 shadow-[0_4px_30px_rgba(0,0,0,0.8)]"
+    :class="navbarDirection === 'bottom' ? 'border-t border-cyan-500/20' : 'border-b border-cyan-500/20'"
+    :style="navbarPositionStyle"
+  >
     
     <!-- 左侧：返回按钮（极简科技线框） -->
     <view
     
       class="absolute left-4 h-3 flex items-center space-x-1 px-3 py-1 bg-transparent   text-slate-300 rounded-sm hover:border-cyan-500 hover:text-cyan-400 transition-all duration-300 text-sm tracking-wider shadow-[inset_0_0_8px_rgba(0,0,0,0.6)]"
     >
-      <image :src="logo1Url"  mode="aspectFit" />
+      <image :src="logo1Url"  mode="aspectFit" class="w-50 " />
     </view>
 
     <!-- 中间：主标题（科技感发光与字距偏宽） -->
@@ -262,6 +266,10 @@ const props = defineProps({
     type: Boolean,
     default: false
   },
+  navbarPosition: {
+    type: String,
+    default: 'top'
+  },
   debugMode: {
     type: Boolean,
     default: false
@@ -336,6 +344,29 @@ const emit = defineEmits([
   'update-feather-enabled',
   'update-feather-radius'
 ])
+
+const parseNavbarPosition = (raw) => {
+  if (!raw || typeof raw !== 'string') return { direction: 'top', offset: 0 }
+  const trimmed = raw.trim()
+  // 匹配 'top' / 'bottom' / 'top-50' / 'bottom-20' 等格式
+  const match = trimmed.match(/^(top|bottom)(?:-(\d+))?$/)
+  if (!match) return { direction: 'top', offset: 0 }
+  return {
+    direction: match[1],
+    offset: match[2] !== undefined ? parseInt(match[2], 10) : 0
+  }
+}
+
+const navbarDirection = computed(() => parseNavbarPosition(props.navbarPosition).direction)
+const navbarOffset = computed(() => parseNavbarPosition(props.navbarPosition).offset)
+const navbarPositionStyle = computed(() => {
+  const dir = navbarDirection.value
+  const offset = navbarOffset.value
+  return {
+    [dir]: `${offset}px`,
+    [dir === 'top' ? 'bottom' : 'top']: 'auto'
+  }
+})
 
 const videoTitle = (video, index) => {
   if (!video) return `镜头 ${index + 1}`

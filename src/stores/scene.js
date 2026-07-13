@@ -29,6 +29,8 @@ export const useSceneStore = defineStore('scene', () => {
   const interactionLocked = ref(false)
   const showAxesHelper = ref(false)
   const showIrregularCubes = ref(false)
+  const showNavbar = ref(true)
+  const navbarPosition = ref('top') // 'top' | 'bottom'
 
   const setLoading = (value) => {
     loading.value = !!value
@@ -93,10 +95,31 @@ export const useSceneStore = defineStore('scene', () => {
     sceneConfig.value = createDefaultSceneConfig()
   }
 
+  const toggleNavbar = () => {
+    showNavbar.value = !showNavbar.value
+  }
+
+  const setShowNavbar = (value) => {
+    showNavbar.value = value !== undefined ? !!value : true
+  }
+
+  const setNavbarPosition = (position) => {
+    if (/^(top|bottom)(-\d+)?$/.test(position)) {
+      navbarPosition.value = position
+    }
+  }
+
   const mergeSceneConfig = (partialConfig) => {
     sceneConfig.value = {
       ...sceneConfig.value,
       ...(partialConfig || {})
+    }
+    // 从配置中提取 UI 控制字段
+    if (partialConfig && 'showNavbar' in partialConfig) {
+      setShowNavbar(partialConfig.showNavbar)
+    }
+    if (partialConfig && 'navbarPosition' in partialConfig) {
+      setNavbarPosition(partialConfig.navbarPosition)
     }
   }
 
@@ -172,6 +195,8 @@ export const useSceneStore = defineStore('scene', () => {
     interactionLocked,
     showAxesHelper,
     showIrregularCubes,
+    showNavbar,
+    navbarPosition,
     setLoading,
     setStatus,
     setIsDevelopment,
@@ -186,6 +211,9 @@ export const useSceneStore = defineStore('scene', () => {
     setInteractionLocked,
     toggleAxesHelper,
     toggleIrregularCubes,
+    toggleNavbar,
+    setShowNavbar,
+    setNavbarPosition,
     resetSceneConfig,
     mergeSceneConfig,
     setSceneConfig,
